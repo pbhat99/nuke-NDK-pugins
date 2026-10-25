@@ -1,0 +1,30 @@
+LINUX:
+
+rm -rf build && mkdir build && cd build
+
+cmake .. -DNUKE_VERSION=17.0v1 -DNUKE_INSTALL_PATH=/opt/Nuke17.0v1
+
+make 
+
+# Then copy build/AlphaToRoto.so and Python/NO_NUMPY/alphaToRoto_py.py or Python/NUMPY/alphaToRoto_py.py (if you have Numpy install in Nuke)
+# into ~/.nuke (or your studio's NUKE_PATH location).
+
+////
+
+MAC:
+
+cd /Users/g/Downloads/AlphaToRoto-main
+
+rm -rf build && mkdir build && cd build
+
+cmake .. -DNUKE_VERSION=17.0v1
+
+make
+
+////
+
+WIN:
+
+cd C:\Users\WORKSTATION\Downloads\AlphaToRoto-main\AlphaToRoto-main
+
+rmdir /s /q build 2>nul & mkdir build && cd build && cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=cl -DNUKE_VERSION=17.0v1 && cmake --build .
