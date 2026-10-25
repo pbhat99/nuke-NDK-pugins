@@ -1,19 +1,111 @@
-CMakeLists.txt.user
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Testing
-Makefile
-cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
-_deps
-CMakeUserPresets.json
+# ==============================================================================
+# Python Cache, Bytecode & Packaging
+# ==============================================================================
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
 
-# CLion
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#cmake-build-*
+# Virtual Environments & Package Metadata
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+.installed.cfg
+*.egg
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+dist/
+pip-wheel-metadata/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Test & Linter Caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+**/cache/
+
+# ==============================================================================
+# Build Directories & Compiler Outputs
+# ==============================================================================
+build/
+**/build/
+bin/
+**/bin/
+x64/
+**/x64/
+x86/
+**/x86/
+Debug/
+**/Debug/
+Release/
+**/Release/
+RelWithDebInfo/
+**/RelWithDebInfo/
+MinSizeRel/
+**/MinSizeRel/
+
+# Compiled object and intermediate files
+*.obj
+*.o
+*.a
+*.lib
+*.exp
+*.pdb
+*.idb
+*.ilk
+*.suo
+*.user
+
+# CMake Generated Files
+CMakeCache.txt
+**/CMakeCache.txt
+CMakeFiles/
+**/CMakeFiles/
+CMakeScripts/
+**/CMakeScripts/
+Testing/
+**/Testing/
+Makefile
+**/Makefile
+cmake_install.cmake
+**/cmake_install.cmake
+install_manifest.txt
+**/install_manifest.txt
+compile_commands.json
+**/compile_commands.json
+CTestTestfile.cmake
+**/CTestTestfile.cmake
+_deps/
+**/_deps/
+CMakeUserPresets.json
+**/CMakeUserPresets.json
+
+# IDEs, Editors & AI Agent Caches
+.vs/
+**/.vs/
+.vscode/
+**/.vscode/
+.idea/
+**/.idea/
+.agents/
+**/.agents/
+*.VC.db
+*.opendb
+*.ipch
+
+# Temporary, Backup & Log Files
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+.DS_Store
+Thumbs.db
