@@ -1,0 +1,105 @@
+version 17.0 v3
+Root {
+ inputs 0
+ name scene_i_sparse_reveal.nk
+ last_frame 1
+ format "256 256 0 0 256 256 1 deepc_val_256"
+ proxy_type scale
+ proxy_format "1024 778 0 0 1024 778 1 1K_Super_35(full-ap)"
+ colorManagement Nuke
+ workingSpaceLUT linear
+ monitorLut sRGB
+ monitorOutLUT rec709
+ int8Lut sRGB
+ int16Lut sRGB
+ logLut Cineon
+ floatLut linear
+}
+Constant {
+ inputs 0
+ color {0 0 0 0}
+ format "256 256 0 0 256 256 1 deepc_val_256"
+ name Constant1
+}
+Expression {
+ expr0 "(x>=64 && x<192 && y>=64 && y<192) ? 0.8 : 0.0"
+ expr1 0.0
+ expr2 "(x>=64 && x<192 && y>=64 && y<192) ? 0.0 : 0.6"
+ expr3 1.0
+ name Expression1
+ xpos -160
+}
+Expression {
+ channel0 depth
+ expr0 "1.0/((x>=64 && x<192 && y>=64 && y<192) ? 4 : 20)"
+ name Expression2
+}
+DeepFromImage {
+ name DeepFromImage1
+ label "sparse: one sample per pixel, no hidden data"
+ xpos -160
+ ypos 60
+}
+DeepCDefocus {
+ coc_mode Manual
+ focus_distance 20
+ size 6
+ name DeepCDefocus1
+ label "edge band filled to alpha 1, FG colour"
+ xpos -160
+ ypos 180
+}
+Constant {
+ inputs 0
+ color {0 0 0.6 1}
+ format "256 256 0 0 256 256 1 deepc_val_256"
+ name Constant3
+}
+DeepFromImage {
+ premult true
+ set_z true
+ z 20
+ name DeepFromImage3
+ xpos 220
+}
+Constant {
+ inputs 0
+ color {0 0 0 0}
+ format "256 256 0 0 256 256 1 deepc_val_256"
+ name Constant2
+}
+Rectangle {
+ area {64 64 192 192}
+ color {0.8 0 0 1}
+ name Rectangle1
+}
+DeepFromImage {
+ premult true
+ set_z true
+ z 4
+ name DeepFromImage2
+ xpos 60
+}
+DeepMerge2 {
+ inputs 2
+ name DeepMerge1
+ label "DeepMerge twin: same visible content, occluded far samples KEPT"
+ xpos 140
+ ypos 60
+}
+DeepCDefocus {
+ coc_mode Manual
+ focus_distance 20
+ size 6
+ name DeepCDefocus2
+ label "alpha 1 by data; far card's blue shows through the edge"
+ xpos 140
+ ypos 180
+}
+StickyNote {
+ inputs 0
+ name StickyNote1
+ label "Scene (i) -- sparse reveal / coverage fill\n\nCheck: an opaque near card over a distant card, built with exactly one sample per pixel (no hidden data anywhere), used to show an alpha dip about one CoC wide inside the silhouette when the near card is defocused (0.51 at its deepest). The coverage fill now closes it: the edge band must read alpha 1, filled with the NEAR card's own colour ratio and no fabricated colour from the far card.\n\nTwo branches: 'sparse' (one sample per pixel; filled to 1 by the node) and 'DeepMerge twin' (the same visible content but with the occluded far card's samples kept; alpha 1 by data, and the far card's BLUE showing through the defocused edge, which the sparse branch must NOT reproduce). The harness's pre_merge reachability sweep (i6/i7) is not reproduced here."
+ note_font_size 14
+ xpos 340
+}
