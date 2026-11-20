@@ -33,22 +33,25 @@ nuke-plugin-builds/
 ├── README.md                  # Project overview and upstream directory
 ├── .gitignore                 # Excludes build caches, object files, and temporary outputs
 ├── COMPILED/                  # Precompiled binaries (managed manually)
-│   ├── init.py                # Root version router (detects running Nuke version)
-│   └── Nuke17.1/              # Nuke 17.1 production build
-│       ├── init.py            # Dynamic tool discovery & Win32 DLL loader
-│       ├── AlphaToRoto/
-│       ├── bamDeVe/
-│       ├── ColorGrade/
-│       ├── cropMore/
-│       ├── DeepC/
-│       ├── DeepErode/
-│       ├── FastNoiseLite/
-│       ├── ldpk/
-│       ├── NukeShenanigans/
-│       ├── oidnDenoise/
-│       ├── OptixDenoiser/
-│       ├── RotoReducer/
-│       └── USDsubD/
+│   ├── init.py                # Root OS & version router (detects platform & running Nuke)
+│   └── WIN/                   # Windows binaries
+│       ├── Nuke16.0/          # Nuke 16.0 Windows build
+│       └── Nuke17.1/          # Nuke 17.1 Windows build
+│           ├── init.py        # Dynamic tool discovery & Win32 DLL loader
+│           ├── AlphaToRoto/
+│           ├── bamDeVe/
+│           ├── ColorGrade/
+│           ├── cropMore/
+│           ├── DeepC/
+│           ├── DeepErode/
+│           ├── FastNoiseLite/
+│           ├── ImageTool/
+│           ├── ldpk/
+│           ├── NukeShenanigans/
+│           ├── oidnDenoise/
+│           ├── OptixDenoiser/
+│           ├── RotoReducer/
+│           └── USDsubD/
 └── <ToolSourceFolders>/       # C++ source code & CMake build scripts
 ```
 
@@ -59,12 +62,12 @@ nuke-plugin-builds/
 Add either the root `COMPILED` directory or the specific version directory to your Nuke plugin path:
 
 ```python
-# Option A: Auto-detects running Nuke version (e.g. routes to Nuke17.1)
+# Option A: Auto-detects running OS and Nuke version (e.g. routes to COMPILED/WIN/Nuke17.1)
 # Replace <WORKSPACE> with your workspace directory path:
 nuke.pluginAddPath("<WORKSPACE>/COMPILED")
 
-# Option B: Direct version load
-nuke.pluginAddPath("<WORKSPACE>/COMPILED/Nuke17.1")
+# Option B: Direct platform & version load
+nuke.pluginAddPath("<WORKSPACE>/COMPILED/WIN/Nuke17.1")
 ```
 
 The loaders automatically register each tool folder, configure Windows DLL search paths, and register node menu entries.

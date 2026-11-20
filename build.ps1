@@ -809,7 +809,7 @@ function Build-SinglePlugin {
     $pluginName = $Plugin.Name
     $srcDir     = Join-Path $WorkspaceRoot $Plugin.SourceDir
     $folderTag  = $NukeTarget.FolderTag
-    $deployDir  = Join-Path $CompiledRoot "$folderTag\$($Plugin.TargetDir)"
+    $deployDir  = Join-Path $CompiledRoot "WIN\$folderTag\$($Plugin.TargetDir)"
     $tmpBuildDir = Join-Path $BuildTmpRoot "${pluginId}_${folderTag}"
 
     Write-Host ""
@@ -1049,7 +1049,7 @@ function Invoke-BuildPlugins {
     Write-Host "========================================================================" -ForegroundColor Cyan
     Write-Host "Nuke Targets : $(($targetsToBuild | ForEach-Object { $_.Name }) -join ', ')" -ForegroundColor Gray
     Write-Host "Plugins      : $(($pluginsToBuild | ForEach-Object { $_.Name }) -join ', ')" -ForegroundColor Gray
-    Write-Host "Deploy Root  : $CompiledRoot" -ForegroundColor Gray
+    Write-Host "Deploy Root  : $(Join-Path $CompiledRoot 'WIN')" -ForegroundColor Gray
     Write-Host "========================================================================" -ForegroundColor Cyan
 
     $totalSuccess = 0
@@ -1059,7 +1059,7 @@ function Invoke-BuildPlugins {
     foreach ($nukeTarget in $targetsToBuild) {
         Write-Host ""
         Write-Host "========================================================================" -ForegroundColor Yellow
-        Write-Host " Target: $($nukeTarget.Name) -> COMPILED/$($nukeTarget.FolderTag)/" -ForegroundColor Yellow
+        Write-Host " Target: $($nukeTarget.Name) -> COMPILED/WIN/$($nukeTarget.FolderTag)/" -ForegroundColor Yellow
         Write-Host "========================================================================" -ForegroundColor Yellow
 
         foreach ($plugin in $pluginsToBuild) {
