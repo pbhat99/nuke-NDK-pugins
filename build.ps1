@@ -308,26 +308,69 @@ $PluginRegistry = @(
 # Helper: Environment & Tool Detection
 # ==============================================================================
 
+function Test-PythonExecutable([string]$exePath) {
+    if ([string]::IsNullOrWhiteSpace($exePath) -or -not (Test-Path $exePath)) { return $false }
+    if ($exePath -match "WindowsApps") { return $false }
+    try {
+        $p = Start-Process -FilePath $exePath -ArgumentList "-c `"import sys; print(sys.executable)`"" -NoNewWindow -Wait -PassThru -RedirectStandardOutput "$env:TEMP\py_test.txt" -RedirectStandardError "$env:TEMP\py_err.txt"
+        return ($p.ExitCode -eq 0)
+    } catch {
+        return $false
+    }
+}
+
 function Get-PythonHost {
     # 1. Existing .venv python
     $venvPy = Join-Path $VenvDir "Scripts\python.exe"
     if (Test-Path $venvPy) {
-        return @{ Path = $venvPy; IsVenv = $true }
+        if (Test-PythonExecutable $venvPy) {
+            return @{ Path = $venvPy; IsVenv = $true }
+        }
     }
-    # 2. System PATH python
-    $pyCmd = Get-Command python.exe -ErrorAction SilentlyContinue
-    if ($pyCmd) {
-        return @{ Path = $pyCmd.Source; IsVenv = $false }
+
+    # 2. Collect candidate python executables directly (NO deep recursive scans)
+    $candidates = [System.Collections.Generic.List[string]]::new()
+
+    # User AppData Python (e.g. Python314)
+    $appDataPy = "$env:LOCALAPPDATA\Programs\Python"
+    if (Test-Path $appDataPy) {
+        Get-ChildItem $appDataPy -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            $p = Join-Path $_.FullName "python.exe"
+            if (Test-Path $p) { $candidates.Add($p) }
+        }
     }
-    # 3. py.exe launcher
+
+    # Nuke embedded Python installations (VFX Reference Platform Python 3.11/3.10)
+    Get-ChildItem "C:\Program Files" -Directory -Filter "Nuke*" -ErrorAction SilentlyContinue | ForEach-Object {
+        $p = Join-Path $_.FullName "python.exe"
+        if (Test-Path $p) { $candidates.Add($p) }
+    }
+
+    # Program Files / Root Python
+    Get-ChildItem "C:\Program Files", "C:\" -Directory -Filter "Python*" -ErrorAction SilentlyContinue | ForEach-Object {
+        $p = Join-Path $_.FullName "python.exe"
+        if (Test-Path $p) { $candidates.Add($p) }
+    }
+
+    # Python Launcher (py.exe)
     $pyLauncher = Get-Command py.exe -ErrorAction SilentlyContinue
-    if ($pyLauncher) {
-        return @{ Path = $pyLauncher.Source; IsVenv = $false }
+    if ($pyLauncher -and $pyLauncher.Source -notmatch "WindowsApps") {
+        $candidates.Add($pyLauncher.Source)
     }
-    # 4. Standard user AppData locations
-    $userPy = Get-ChildItem "$env:LOCALAPPDATA\Programs\Python" -Filter "python.exe" -Recurse -Depth 2 -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($userPy) {
-        return @{ Path = $userPy.FullName; IsVenv = $false }
+
+    # System PATH python.exe (strictly exclude WindowsApps redirector stubs!)
+    $allPyCmds = Get-Command python.exe -All -ErrorAction SilentlyContinue
+    foreach ($cmd in $allPyCmds) {
+        if ($cmd.Source -notmatch "WindowsApps") {
+            $candidates.Add($cmd.Source)
+        }
+    }
+
+    # 3. Test each candidate to ensure it genuinely executes
+    foreach ($cand in $candidates) {
+        if (Test-PythonExecutable $cand) {
+            return @{ Path = $cand; IsVenv = $false }
+        }
     }
     return $null
 }
@@ -509,7 +552,7 @@ function Show-ToolchainGuide {
 
 function Pause-Prompt {
     param([string]$Message = "Press [Enter] to continue...")
-    if (-not [Console]::IsInputRedirected) {
+    if ([string]::IsNullOrWhiteSpace($MenuChoice) -and -not [Console]::IsInputRedirected) {
         Read-Host $Message | Out-Null
     }
 }
@@ -783,9 +826,9 @@ function Invoke-InstallRequirements {
         }
     }
 
-    Write-Host ""
-    Write-Host "Press [G] to view full Toolchain Installation Guide, or [Enter] to return..." -ForegroundColor Gray
-    if (-not [Console]::IsInputRedirected) {
+    if ([string]::IsNullOrWhiteSpace($MenuChoice) -and -not [Console]::IsInputRedirected) {
+        Write-Host ""
+        Write-Host "Press [G] to view full Toolchain Installation Guide, or [Enter] to return..." -ForegroundColor Gray
         $key = [Console]::ReadKey($true)
         if ($key.Key -eq 'G') {
             Show-ToolchainGuide
