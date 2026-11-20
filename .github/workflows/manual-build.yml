@@ -1,0 +1,216 @@
+name: Manual Plugin Builder & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      nuke_version:
+        description: 'Target Nuke Version'
+        required: true
+        default: '17.1'
+        type: choice
+        options:
+          - '17.1'
+          - '16.0'
+          - 'ALL'
+
+      target_platform:
+        description: 'Target OS Platform'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - 'ALL'
+          - 'Windows'
+          - 'Linux'
+          - 'macOS'
+
+      plugin_target:
+        description: 'Plugin to Build'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - 'ALL'
+          - 'ImageTool'
+          - 'bamDeVe'
+          - 'cropMore'
+          - 'rotoReducer'
+          - 'AlphaToRoto'
+          - 'ColorGrade'
+          - 'DeepC'
+          - 'DeepErode'
+          - 'FastNoiseLite'
+          - 'NukeShenanigans'
+          - 'USDsubD'
+
+      auto_commit:
+        description: 'Commit built binaries to COMPILED/<PLATFORM>/ in repository?'
+        required: true
+        default: true
+        type: boolean
+
+      create_release:
+        description: 'Publish a GitHub Release with ZIP after successful build?'
+        required: true
+        default: false
+        type: boolean
+
+      release_version:
+        description: 'Release Tag (required if Publish Release is checked, e.g. v1.1.0)'
+        required: false
+        default: 'v1.0.0'
+        type: string
+
+      release_title:
+        description: 'Release Title'
+        required: false
+        default: 'Nuke Plugins Multi-Platform Release'
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  # --------------------------------------------------------------------------
+  # 1. Prepare Build Matrix based on interactive dropdown inputs
+  # --------------------------------------------------------------------------
+  prepare-matrix:
+    name: Parse Inputs & Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      versions: ${{ steps.set-matrix.outputs.versions }}
+      platforms: ${{ steps.set-matrix.outputs.platforms }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ github.event.inputs.nuke_version }}" = "ALL" ]; then
+            echo 'versions=["17.1", "16.0"]' >> $GITHUB_OUTPUT
+          else
+            echo 'versions=["${{ github.event.inputs.nuke_version }}"]' >> $GITHUB_OUTPUT
+          fi
+
+          if [ "${{ github.event.inputs.target_platform }}" = "ALL" ]; then
+            echo 'platforms=["Windows", "Linux", "macOS"]' >> $GITHUB_OUTPUT
+          else
+            echo 'platforms=["${{ github.event.inputs.target_platform }}"]' >> $GITHUB_OUTPUT
+          fi
+
+  # --------------------------------------------------------------------------
+  # 2. Multi-Platform Build Job (Windows, Linux, macOS)
+  # --------------------------------------------------------------------------
+  build:
+    needs: prepare-matrix
+    name: Build (${{ matrix.platform }} - Nuke ${{ matrix.nuke_version }})
+    runs-on: ${{ matrix.platform == 'Windows' && 'windows-latest' || (matrix.platform == 'macOS' && 'macos-latest' || 'ubuntu-latest') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJson(needs.prepare-matrix.outputs.platforms) }}
+        nuke_version: ${{ fromJson(needs.prepare-matrix.outputs.versions) }}
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup CMake & Ninja
+        uses: lukka/get-cmake@latest
+
+      # Cache NDK headers and libraries permanently so 2GB downloads happen only once
+      - name: Cache Nuke NDK Libraries & Headers
+        id: cache-ndk
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ndk_cache
+          key: ndk-${{ matrix.platform }}-Nuke${{ matrix.nuke_version }}-v1
+
+      - name: Setup Nuke NDK
+        run: |
+          python .github/scripts/setup_ndk.py --platform ${{ matrix.platform }} --version ${{ matrix.nuke_version }} --cache-dir "${{ github.workspace }}/.ndk_cache"
+
+      - name: Compile Plugins (${{ matrix.platform }})
+        run: |
+          python .github/scripts/build_plugins.py --platform ${{ matrix.platform }} --version ${{ matrix.nuke_version }} --plugin "${{ github.event.inputs.plugin_target }}" --ndk "${{ env.NDKDIR }}"
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: COMPILED-${{ matrix.platform }}-Nuke${{ matrix.nuke_version }}
+          path: COMPILED/
+          retention-days: 7
+
+      - name: Commit & Push Compiled Binaries to Repository
+        if: github.event.inputs.auto_commit == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "build(ci): automated binary deployment for ${{ matrix.platform }} Nuke ${{ matrix.nuke_version }}"
+          file_pattern: 'COMPILED/**'
+
+  # --------------------------------------------------------------------------
+  # 3. Create GitHub Release with Compiled ZIP (Conditional on checkbox)
+  # --------------------------------------------------------------------------
+  release:
+    needs: [prepare-matrix, build]
+    name: Publish GitHub Release
+    if: github.event.inputs.create_release == 'true' && success()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Latest Code & Binaries
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+
+      - name: Download Matrix Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded-artifacts/
+
+      - name: Consolidate Artifacts into COMPILED
+        run: |
+          # Merge any newly uploaded artifacts into COMPILED/
+          if [ -d "downloaded-artifacts" ]; then
+            cp -rn downloaded-artifacts/*/* . 2>/dev/null || true
+          fi
+
+      - name: Create ZIP Archives for Release
+        run: |
+          VERSION="${{ github.event.inputs.release_version }}"
+          echo "Packaging Release $VERSION ..."
+          
+          # 1. Full Multi-Platform Bundle ZIP
+          zip -r "NukePlugins-${VERSION}-ALL-PLATFORMS.zip" COMPILED/ README.md LICENSE* 2>/dev/null || true
+
+          # 2. Windows-Specific ZIP
+          if [ -d "COMPILED/WIN" ]; then
+            zip -r "NukePlugins-${VERSION}-Windows.zip" COMPILED/WIN/ COMPILED/init.py README.md
+          fi
+
+          # 3. Linux-Specific ZIP
+          if [ -d "COMPILED/LINUX" ]; then
+            zip -r "NukePlugins-${VERSION}-Linux.zip" COMPILED/LINUX/ COMPILED/init.py README.md
+          fi
+
+          # 4. macOS-Specific ZIP
+          if [ -d "COMPILED/MAC" ]; then
+            zip -r "NukePlugins-${VERSION}-macOS.zip" COMPILED/MAC/ COMPILED/init.py README.md
+          fi
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_version }}
+          name: "${{ github.event.inputs.release_title }} (${{ github.event.inputs.release_version }})"
+          files: |
+            NukePlugins-*.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
