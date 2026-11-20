@@ -6,16 +6,13 @@
 namespace DD {
   namespace Image {
 
-    /*! This is a file format handler interface.  Writers implement this directly,
-        but because of the way Readers work (multi-readers per Node), if they want
-        this they have to make a new class.
-
-        Subclasses should implement knobs() just as an Op(Node) would.
-
-        FileHandler is different from FileOp since there needs to be a FileOp
-        instance per file, whereas the single FileHandler knob interface applies
-        for the entire file sequence.
-    */
+    /*
+     * This is a file format handler interface.  Writers implement this directly,
+     * but because of the way Readers work (multi-readers per Node), if they want
+     * this they have to make a new class.
+     *
+     * Subclasses should implement knobs() just as an Op would.
+     */
     class DDImage_API FileHandler
     {
     public:
@@ -50,22 +47,6 @@ namespace DD {
 
       virtual ~FileHandler() { }
     };
-
-    //------------------------------------------------------------------
-
-    /*! Shared class to provide file-format specific knobs for reader plugins.
-
-        This is the common subclass for all reader types (Reader, DeepReader, etc) so
-        that knob interfaces can be shared between them.
-    */
-    class DDImage_API FileReaderFormat : public FileHandler
-    {
-    public:
-      ~FileReaderFormat() override;
-      virtual void append(Hash& hash) = 0;
-    };
-
-    //------------------------------------------------------------------
 
     /**
      * This class is a mixin class for Read/Write/ReadGeo/WriteGeo etc.

@@ -10,11 +10,11 @@
 #ifndef _usgUsdEngineVersionNumber_h_
 #define _usgUsdEngineVersionNumber_h_
 
-#define kFnUsdEngineVersion "0.9."
-#define kFnUsdEngineVersionInteger (10000 * 0 + 1000 * 9 + 0)
+#define kFnUsdEngineVersion "0.6."
+#define kFnUsdEngineVersionInteger (10000 * 0 + 1000 * 6 + 2)
 #define kFnUsdEngineVersionMajorNum 0
-#define kFnUsdEngineVersionMinorNum 9
-#define kFnUsdEngineVersionPatchNum 0
+#define kFnUsdEngineVersionMinorNum 6
+#define kFnUsdEngineVersionPatchNum 2
 
 /* #undef kUsdAbstractionPythonEnabled */
 

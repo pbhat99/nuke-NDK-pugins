@@ -91,17 +91,8 @@ namespace lux {
       Token::Lazy ShapingAPI{"ShapingAPI"};
       Token::Lazy SphereLight{"SphereLight"};
       Token::Lazy VolumeLightAPI{"VolumeLightAPI"};
-      Token::Lazy MaterialXConfigAPI{"MaterialXConfigAPI"};
     } types;
     // --(BEGIN CUSTOM CODE)--
-    struct SlrLightTokensDef {
-      usg::Token::Lazy falloffType{"slr:falloff_type"};
-      usg::Token::Lazy noFalloff{"noFalloff"};
-      usg::Token::Lazy linearFalloff{"linearFalloff"};
-      usg::Token::Lazy quadraticFalloff{"quadraticFalloff"};
-      usg::Token::Lazy cubicFalloff{"cubicFalloff"};
-    } slrLightTokens;
-
     // --(END CUSTOM CODE)--
   };
 

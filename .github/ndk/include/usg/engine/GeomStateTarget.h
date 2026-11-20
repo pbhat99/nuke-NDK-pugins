@@ -110,6 +110,23 @@ namespace usg {
 
     //---------------------------------------------------
 
+    //! Total version hash including all children. Built the same way as hash().
+    fdk::Hash         versionHash() const;
+
+    //! Current version hash of the local hash.
+    fdk::Hash         localVersionHash() const { return _localVersionHash; }
+
+    //! Set the target's local version hash to a specific value.
+    void              setLocalVersionHash(const fdk::Hash& h) { _localVersionHash = h; }
+
+    //! Append a hash to the target's local version hash.
+    void              appendLocalVersionHash(const fdk::Hash& h) { _localVersionHash.appendIfNotDefault(h); }
+
+    //! Resets (sets to default value) the local version hash.
+    void              resetLocalVersionHash() { _localVersionHash.reset(); }
+
+    //---------------------------------------------------
+
     //! Is this target or any of the contributing children animating?
     bool  isAnimating() const;
 
@@ -130,6 +147,7 @@ namespace usg {
   protected:
     usg::Token            _identifier;        //!< Should be unique so that shared target identifiers can be used
     fdk::Hash             _localHash;         //!< Target's local hash contribution
+    fdk::Hash             _localVersionHash;  //!< Local version number hash
     bool                  _animating;         //!< Is the target's local hash expected to change over time
     GeomStateTarget*      _parent;            //!< If a child of another target
     GeomStateTargetPtrSet _children;          //!< Child targets contributing to this target's hash
@@ -140,6 +158,35 @@ namespace usg {
 
   using GeomStateTargetArray  = std::vector<GeomStateTarget>;
   using GeomStateTargetIdxMap = std::unordered_map<usg::Token, uint32_t>;
+
+
+  //--------------------------------------------------------------------------------
+
+#if 0
+  class USG_ENGINE_API GeomStateTargetClip
+  {
+  public:
+    usg::Token        name;       //!< Name of clip.
+    fdk::TimeValueSet times;      //!< Time set
+
+    GeomStateTargetClip(const GeomStateTarget&    target,
+                        const KnobBindingMapList& view_bindings,
+                        int32_t                   view = -1);
+
+    // Equality only tests name.
+    bool operator == (const GeomStateTargetClip& b) const { return (name == b.name); }
+    bool operator != (const GeomStateTargetClip& b) const { return (name != b.name); }
+    // Greater/less-than only tests name.
+    bool operator <  (const GeomStateTargetClip& b) const { return (name < b.name); }
+    bool operator >  (const GeomStateTargetClip& b) const { return (name > b.name); }
+
+
+  protected:
+    friend USG_ENGINE_API std::ostream& operator << (std::ostream&, const GeomStateTargetClip&);
+  };
+
+  USG_ENGINE_API std::ostream& operator << (std::ostream& o, const GeomStateTargetClip&);
+#endif
 
 
 } // namespace usg

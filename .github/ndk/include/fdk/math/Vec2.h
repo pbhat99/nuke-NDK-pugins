@@ -7,12 +7,13 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdint>
 #include <limits>
 #include <vector>
 
 namespace fdk {
   class Hash;
+  template <typename T> class Vec3;
+  template <typename T> class Vec4;
   template <typename T> class Mat4;
 
   //! \class fdk::Vec2
@@ -710,6 +711,11 @@ namespace fdk {
       y = static_cast<T>(1);
     }
   }
+
+  extern template class FDK_API Vec2<fdk::half>;
+  extern template class FDK_API Vec2<int>;
+  extern template class FDK_API Vec2<float>;
+  extern template class FDK_API Vec2<double>;
 
 }
 

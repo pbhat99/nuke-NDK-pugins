@@ -10,8 +10,7 @@
 #include "math.h"
 #include "DDImage/Box.h"
 #include "DDImage/Deprecation.h"
-
-#include "ndk/graph/GsvTypes.h"
+#include "DDImage/GsvSet.h"
 
 #include <Build/fnBuild.h>
 #include <string>
@@ -24,11 +23,8 @@ namespace DD
 {
   namespace Image
   {
-    using GraphScopeId = ndk::GraphScopeId;
-    using GraphScopePtr = ndk::GraphScopePtr;
     class Hash;
     class Op;
-
 
     /*! \class DD::Image::OutputContext
 
@@ -84,9 +80,6 @@ namespace DD
       OutputContext(double frame,
                     int    view,
                     const GraphScopePtr graphScope);
-
-      //! Construct a fully defined OutputContext (minus ProxyContext) which must include a Node GraphScope id.
-      OutputContext(ndk::GraphScopeId graphScopeCtx, double frame, int view, ContextType type = ContextType::eNone);
 
       //!
       static const OutputContext& defaultContext();
@@ -168,7 +161,7 @@ namespace DD
       static void (* create_view)(const std::string& s);
 
       //! Returns the GraphScopeRepository in use by Nuke.
-      static ndk::GraphScopeRepositoryPtr (* graphScopeRepository)();
+      static GraphScopeRepositoryPtr (* graphScopeRepository)();
 
       // Merge with lookup_view
       //! If a view exists with name \a viewName on \a op's root node then that

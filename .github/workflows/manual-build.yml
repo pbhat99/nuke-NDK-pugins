@@ -6,11 +6,11 @@ on:
       nuke_version:
         description: 'Nuke Version to build (Available in repository NDK stubs)'
         required: true
-        default: '17.1'
+        default: '17.1v2'
         type: choice
         options:
-          - '17.1'
-          - '16.0'
+          - '17.1v2'
+          - '16.0v9'
           - 'ALL'
 
       plugin_target:
@@ -73,27 +73,33 @@ jobs:
           echo "Selected Nuke version: $RAW_VER"
 
           if [ "$RAW_VER" = "ALL" ]; then
-            # Dynamically discover all verified available versions in .github/ndk/win
+            # Dynamically discover all verified available full versions in .github/ndk/win
             VERSIONS_JSON=$(python3 -c "
           import json, os, glob
           ndks = sorted(glob.glob('.github/ndk/win/Nuke*'))
-          vers = [os.path.basename(p).replace('Nuke', '') for p in ndks if os.path.isfile(os.path.join(p, 'DDImage.lib'))]
-          if not vers:
-              raise SystemExit('No valid Windows NDK stubs found in .github/ndk/win/')
-          print(json.dumps(vers))
+          full_vers = []
+          for p in ndks:
+              if os.path.isfile(os.path.join(p, 'DDImage.lib')):
+                  name = os.path.basename(p).replace('Nuke', '').replace('nuke', '')
+                  if 'v' in name:
+                      full_vers.append(name)
+          if not full_vers:
+              full_vers = [os.path.basename(p).replace('Nuke', '').replace('nuke', '') for p in ndks if os.path.isfile(os.path.join(p, 'DDImage.lib'))]
+          print(json.dumps(sorted(list(set(full_vers)))))
           ")
             echo "Building all available versions: $VERSIONS_JSON"
             echo "versions=$VERSIONS_JSON" >> $GITHUB_OUTPUT
           else
+            CLEAN_VER=$(echo "$RAW_VER" | sed -e 's/^[Nn]uke//')
             # Explicit check before running: DO NOT assume closest version
-            if [ ! -f ".github/ndk/win/Nuke${RAW_VER}/DDImage.lib" ]; then
-              echo "::error::Nuke version '${RAW_VER}' NDK stub does not exist in .github/ndk/win/Nuke${RAW_VER}/DDImage.lib"
+            if [ ! -f ".github/ndk/win/Nuke${CLEAN_VER}/DDImage.lib" ] && [ ! -f ".github/ndk/win/Nuke${RAW_VER}/DDImage.lib" ]; then
+              echo "::error::Nuke version '${RAW_VER}' NDK stub does not exist in .github/ndk/win/Nuke${CLEAN_VER}/DDImage.lib"
               echo "Available NDK versions in repository:"
               ls -d .github/ndk/win/Nuke* 2>/dev/null || echo "None found"
               echo "Please run 'build.bat ndk' locally on a machine with Nuke ${RAW_VER} installed and push the stubs."
               exit 1
             fi
-            echo "versions=[\"$RAW_VER\"]" >> $GITHUB_OUTPUT
+            echo "versions=[\"$CLEAN_VER\"]" >> $GITHUB_OUTPUT
           fi
 
   # --------------------------------------------------------------------------

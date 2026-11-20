@@ -387,6 +387,7 @@ function Get-InstalledNukeVersions {
             if (Test-Path $ddLib) {
                 $verString = ""
                 $folderTag = ""
+                $shortFolderTag = ""
                 $major = 0
                 $minor = 0
 
@@ -396,27 +397,31 @@ function Get-InstalledNukeVersions {
                     $minor = [regex]::Match($content, 'kDDImageVersionMinorNum\s+(\d+)').Groups[1].Value
                     $rel = [regex]::Match($content, 'kDDImageVersionReleaseNum\s+(\d+)').Groups[1].Value
                     $verString = "${major}.${minor}v${rel}"
-                    $folderTag = "Nuke${major}.${minor}"
+                    $folderTag = "Nuke${major}.${minor}v${rel}"
+                    $shortFolderTag = "Nuke${major}.${minor}"
                 } else {
                     if ($c.Name -match 'Nuke(\d+)\.(\d+)(?:v(\d+))?') {
                         $major = $Matches[1]
                         $minor = $Matches[2]
                         $rel = if ($Matches[3]) { $Matches[3] } else { "1" }
                         $verString = "${major}.${minor}v${rel}"
-                        $folderTag = "Nuke${major}.${minor}"
+                        $folderTag = "Nuke${major}.${minor}v${rel}"
+                        $shortFolderTag = "Nuke${major}.${minor}"
                     } else {
                         $folderTag = $c.Name
+                        $shortFolderTag = $c.Name
                         $verString = $c.Name.Replace("Nuke", "")
                     }
                 }
 
                 $nukeList.Add([PSCustomObject]@{
-                    Name      = "Nuke $verString"
-                    Version   = $verString
-                    FolderTag = $folderTag
-                    Path      = $dir
-                    Major     = [int]$major
-                    Minor     = [int]$minor
+                    Name           = "Nuke $verString"
+                    Version        = $verString
+                    FolderTag      = $folderTag
+                    ShortFolderTag = $shortFolderTag
+                    Path           = $dir
+                    Major          = [int]$major
+                    Minor          = [int]$minor
                 })
             }
         }
@@ -1254,12 +1259,21 @@ function Invoke-ExtractNDK {
         }
 
         if (Test-Path $srcLib) {
+            # 1. Primary full version folder (e.g. Nuke17.1v2)
             New-Item -ItemType Directory -Path $targetWinFolder -Force | Out-Null
             $destLib = Join-Path $targetWinFolder "DDImage.lib"
-            Write-Host "    Copying DDImage.lib to $destLib ..." -ForegroundColor Gray
+            Write-Host "    Copying DDImage.lib to full version folder: $destLib ..." -ForegroundColor Gray
             Copy-Item -Path $srcLib -Destination $destLib -Force
             $mb = [math]::Round((Get-Item $destLib).Length / 1MB, 2)
-            Write-Host "    [OK] DDImage.lib copied ($mb MB)." -ForegroundColor Green
+            Write-Host "    [OK] Full version DDImage.lib copied ($mb MB)." -ForegroundColor Green
+
+            # 2. Also populate base version folder for backwards compatibility (e.g. Nuke17.1)
+            if ($target.ShortFolderTag -and $target.ShortFolderTag -ne $target.FolderTag) {
+                $shortWinFolder = Join-Path $winNdkDest $target.ShortFolderTag
+                New-Item -ItemType Directory -Path $shortWinFolder -Force | Out-Null
+                Copy-Item -Path $srcLib -Destination (Join-Path $shortWinFolder "DDImage.lib") -Force
+                Write-Host "    [OK] Base version alias $($target.ShortFolderTag) updated." -ForegroundColor Gray
+            }
             $extractedCount++
         } else {
             Write-Host "    [WARN] DDImage.lib not found in $($target.Path)" -ForegroundColor Yellow

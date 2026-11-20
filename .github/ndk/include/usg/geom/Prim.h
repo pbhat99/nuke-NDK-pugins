@@ -5,12 +5,9 @@
 
 #include "usg/base/Token.h"
 #include "usg/geom/Attribute.h"
-#include "usg/geom/ValueDictionary.h"
+#include "usg/geom/CustomData.h"
 #include "usg/geom/Relationship.h"
 #include "usg/geom/GeomTokens.h"
-#include "usg/geom/ListPosition.h"
-
-#include <fdk/base/Hash.h>
 
 #include <memory>
 
@@ -24,6 +21,20 @@ namespace usg
   using LayerConstRef = std::shared_ptr<const Layer>;
   using StageRef = std::shared_ptr<Stage>;
   using StageConstRef = std::shared_ptr<const Stage>;
+
+  enum class ListPosition {
+    PrependFront,
+    PrependBack,
+    AppendFront,
+    AppendBack,
+
+    // The following four values are not defined in UsdListPosition.
+    DeleteFront,
+    DeleteBack,
+    ExplicitFront,
+    ExplicitBack
+  };
+
 
   //--------------------------------------------------------
 
@@ -117,17 +128,11 @@ namespace usg
     //! Returns the path of the prim
     Path                getPath() const;
 
-    //! Returns the path of the prim as a string
-    std::string         getPathAsString() const;
-
     //! Returns the name of the type of the prim
     Token               getTypeName() const;
 
     //! Return this prim's parent prim. Returns an invalid prim if this is a root prim.
     Prim                getParent() const;
-
-    //! Returns a hash of the whole prim including metadata, attributes, and relationships.
-    fdk::Hash           getHash() const;
 
     //! Returns true if the prim is an instance of the given type
     bool   isA(const Token& typeName) const;
@@ -160,9 +165,6 @@ namespace usg
     bool   hasOverSpecifier() const;
     bool   hasClassSpecifier() const;
     bool   hasArcs() const;
-    void   getLayerIntroducingArc(LayerRef& layer) const;
-    void   getTargetPrimPathOfArc(Path& path) const;
-    bool   isAncestral() const;
 
     //! Returns true if the prim is the pseudo root - ie '/'.
     bool   isPseudoRoot() const;
@@ -180,7 +182,6 @@ namespace usg
     bool   isInPrototype() const;
 
     bool   hasPayload() const;
-    void   clearPayload() const;
     bool   isLoaded() const;
     void   load(bool loadWithDescendants = true) const;
     void   unload() const;
@@ -190,9 +191,6 @@ namespace usg
     //! its parent's visibility state.
     void   setVisibility(bool active, fdk::TimeValue time = fdk::defaultTimeValue());
 
-    //! Clear the prim's visibility attribute.
-    void   clearVisibility();
-
     //! Returns the state of the prim's local visibility attribute, if authored. If authored
     //! and the value is 'invisible' then false is returned, otherwise true is returned if
     //! value is 'inherited' or was not authored (default is 'inherited'.)
@@ -200,10 +198,6 @@ namespace usg
     //! You must walk up the graph checking for any parents explicitly set 'invisible',
     //! and if no more parents left then this prim is -by default- visible.
     bool   visibility(fdk::TimeValue time = fdk::defaultTimeValue()) const;
-
-    //! Calculate the effective visibility of this prim, as defined by its most ancestral authored
-    //! "invisible" opinion, if any.
-    Token   computeVisibility(fdk::TimeValue time = fdk::defaultTimeValue()) const;
 
     // deprecated, use setVisibility() instead
     void   setVisible(bool active, fdk::TimeValue time = fdk::defaultTimeValue()) { setVisibility(active, time); }
@@ -214,7 +208,6 @@ namespace usg
 
     bool   addAppliedSchema(const Token& schemaName, ListPosition position = ListPosition::PrependBack);
     bool   removeAppliedSchema(const Token& schemaName);
-    TokenArray getAppliedSchemas() const;
 
     //------------------------------------------------------
 
@@ -232,14 +225,11 @@ namespace usg
     //! Sets the metadata (or field for sdfPrim) value of given key.
     void   setMetadata(const std::string& key, const Value& value);
 
-    //! Sets the dictionary metadata (or field for sdfPrim) value of given key and keyPath
+    //! Sets the dictionary metadata (or field for sdfPrim) value of given key.and keyPath
     bool   setMetadataByDictKey(const Token& key, const Token& keyPath, const Value& value);
 
-    //! Gets the dictionary metadata (or field for sdfPrim) value of given key and keyPath.
+    //! Gets the dictionary metadata (or field for sdfPrim) value of given key.and keyPath.
     bool   getMetadataByDictKey(const Token& key, const Token& keyPath, Value& value) const;
-
-    //! Clears the dictionary metadata (or field for sdfPrim) of given key and keyPath.
-    bool   clearMetadataByDictKey(const Token& key, const Token& keyPath);
 
     //! Sets the custom data value of given key.
     void   setCustomData(const std::string& key, const Value& value);
@@ -251,7 +241,7 @@ namespace usg
     Value  getCustomData(const std::string& key) const;
 
     //! Returns the prim's custom data.
-    ValueDictionaryRef getCustomData() const;
+    CustomDataRef getCustomData() const;
 
     //! Checks whether the prim has custom data for the key.
     bool   hasCustomData(const std::string& key) const;
@@ -259,35 +249,19 @@ namespace usg
     //! Erases the custom data for the key.
     void   removeCustomData(const std::string& key);
 
-    //! Clear the metadata for the key.
-    bool   clearMetadata(const Token& key);
-
     //------------------------------------------------------
 
     //! Return this prim's metadata given a key token.
     bool   getMetadata(const Token& key, Value& value) const;
 
-    //! Returns the metadata of type VtDictionary given a key token.
-    bool getDictMetadata(const Token& key, ValueDictionaryRef& dict) const;
-
     //! Returns the list field names of the prim's metadata.
     TokenArray getMetadataFieldNames() const;
-
-    //! Return this prim's metadata fallback value given a key.
-    Value getMetadataFallbackValue(const std::string& key) const;
 
     //! Returns the list of authored metadata. This method does not return field keys for
     //! composition arcs.
     std::vector<Token> getAuthoredMetadata() const;
 
     //------------------------------------------------------
-
-    enum class PrimSpecifier
-    {
-      Def,
-      Over,
-      Class,
-    };
 
     enum {
       ActiveFlag = 0,
@@ -522,7 +496,6 @@ namespace usg
 
     //! Returns the list of attributes.
     std::vector<Token> getAttributes() const;
-    std::vector<Attribute> getUsgAttributes() const;
     //! Returns the list of authored attributes.
     std::vector<Token> getAuthoredAttributes() const;
     //! Returns the list of authored relationships.
@@ -562,11 +535,8 @@ namespace usg
     void          addInherit(const Path&  path,
                              ListPosition position = ListPosition::PrependBack);
 
-    //! Return the prim's inherits list (applied/composed).
+    //! Return the prim's inherits list.
     PathArray     getInherits();
-
-    //! Return the prim's inherits list for a specific list-op type.
-    PathArray     getInherits(ListPosition listOpType);
 
     //! Removes a inherit path to the prim's inherits list.
     void          removeInherit(const Path& path);
@@ -580,12 +550,6 @@ namespace usg
                                ListPosition       position = ListPosition::PrependBack,
                                double offset = 0.0,
                                double scale = 1.0);
-
-    //! Return the prim's references list (applied/composed).
-    std::vector<std::pair<std::string, Path>> getReferences();
-
-    //! Return the prim's references list for a specific list-op type.
-    std::vector<std::pair<std::string, Path>> getReferences(ListPosition listOpType);
 
     //! Removes a reference to the prim's reference list.
     void          removeReference(const std::string& identifier,
@@ -605,12 +569,6 @@ namespace usg
                              double offset = 0.0,
                              double scale = 1.0);
 
-    //! Return the prim's payloads list (applied/composed).
-    std::vector<std::pair<std::string, Path>> getPayloads();
-
-    //! Return the prim's payloads list for a specific list-op type.
-    std::vector<std::pair<std::string, Path>> getPayloads(ListPosition listOpType);
-
     //! Removes a payload to the prim's payload list.
     void          removePayload(const std::string& identifier,
                                 const Path&        path,
@@ -625,12 +583,6 @@ namespace usg
     //! Adds a specialize path to the prim's specializes list.
     void          addSpecialize(const Path&   path,
                                 ListPosition  position = ListPosition::PrependBack);
-
-    //! Return the prim's specializes list (applied/composed).
-    PathArray     getSpecializes();
-
-    //! Return the prim's specializes list for a specific list-op type.
-    PathArray     getSpecializes(ListPosition listOpType);
 
     //! Removes a specialize path to the prim's specializes list.
     void          removeSpecialize(const Path& path);
@@ -671,14 +623,9 @@ namespace usg
                        bool includeClasses = false,
                        bool includeOverrides = true) const;
 
-    // Removes the child. Returns true if successful, false if failed.
-    bool removeChild(const usg::Prim& child);
-
     //! Returns a possible layer which defined this prim. This returns the layer containing the first "def" for the prim.
     LayerRef  getDefiningLayer() const;
-    //! Returns a list of layers which contibuted to the creation of this layer. Only works with
-    //! prims coming from a stage, returns an empty list otherwise.
-    std::vector<LayerRef> getLayerStack() const;
+
 
   public:
     //! Debugging - prints some key info about the prim to a stream.

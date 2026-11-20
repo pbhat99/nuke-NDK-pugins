@@ -309,8 +309,6 @@ namespace DD
         return *this == identity();
       }
 
-      bool isNearlyIdentity() const;
-
       /*! Replace the contents with the identity. */
       void makeIdentity() { memcpy(&a00, &identity().a00, DD_IMAGE_MATRXI4_BYTE_SIZE); }
 

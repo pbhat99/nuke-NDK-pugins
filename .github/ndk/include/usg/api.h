@@ -45,12 +45,7 @@ namespace usg
   // Version of underlying geometry USD API to cast geom impl() objects
   USG_API int usdAPIMajorVersion();
   USG_API int usdAPIMinorVersion();
-  USG_API int usdAPIPatchVersion();
-
-  [[deprecated("Use usdAPIPatchVersion()")]] inline int usdAPIPathVersion()
-  {
-    return usdAPIPatchVersion();
-  }
+  USG_API int usdAPIPathVersion();
 
   USG_API int usdAPIVersion();
 

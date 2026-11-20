@@ -5,8 +5,6 @@
 
 #include "usg/base/Array.h"
 
-#include <cstdint>
-
 #include "fdk/math/half.h"
 #include "fdk/math/Mat4.h"
 #include "fdk/math/Vec2.h"

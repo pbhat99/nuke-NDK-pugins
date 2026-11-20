@@ -28,17 +28,32 @@ def setup_ndk(platform_name, version, cache_dir=None):
                 break
 
     # 2. Platform-specific NDK directory
+    v_clean = version.lower().replace("nuke", "")
+    folder_tag = f"Nuke{v_clean}"
+
     if platform_name == "Windows":
-        target_ndk = ndk_root / "win" / f"Nuke{version}"
-        ddlib = target_ndk / "DDImage.lib"
-        
+        candidates = [
+            ndk_root / "win" / folder_tag,
+            ndk_root / "win" / f"Nuke{version}",
+            ndk_root / "win" / version,
+        ]
+        if "v" in v_clean:
+            base_v = v_clean.split("v")[0]
+            candidates.append(ndk_root / "win" / f"Nuke{base_v}")
+
+        target_ndk = None
+        for cand in candidates:
+            if cand.exists() and (cand / "DDImage.lib").exists():
+                target_ndk = cand
+                break
+
         # Check availability before run - DO NOT assume closest version
-        if not target_ndk.exists() or not ddlib.exists():
+        if not target_ndk:
             avail_dirs = sorted((ndk_root / "win").glob("Nuke*"))
             avail_versions = [d.name.replace("Nuke", "") for d in avail_dirs if (d / "DDImage.lib").exists()]
-            print(f"\n[ERROR] Requested Nuke {version} Windows NDK is not available in repository at: {ddlib}")
+            print(f"\n[ERROR] Requested Nuke '{version}' Windows NDK is not available in repository.")
             print(f"Available Windows NDK versions in repository: {', '.join(avail_versions) if avail_versions else 'None'}")
-            print(f"Do not assume closest version. To add Nuke {version}, run 'build.bat ndk' locally on a machine with Nuke {version} installed.")
+            print(f"To add Nuke {version}, run 'build.bat ndk' locally on a machine with Nuke {version} installed.")
             sys.exit(1)
 
         # Ensure include/ exists inside target_ndk
@@ -49,7 +64,7 @@ def setup_ndk(platform_name, version, cache_dir=None):
                 print(f"[WARN] Could not copy include: {e}")
 
     elif platform_name == "macOS":
-        target_ndk = ndk_root / "mac" / f"Nuke{version}"
+        target_ndk = ndk_root / "mac" / folder_tag
         target_ndk.mkdir(parents=True, exist_ok=True)
         if common_include.exists() and not (target_ndk / "include").exists():
             shutil.copytree(common_include, target_ndk / "include", dirs_exist_ok=True)
@@ -63,7 +78,7 @@ def setup_ndk(platform_name, version, cache_dir=None):
                 print(f"[WARN] Could not create stub dylib: {e}")
 
     else: # Linux
-        target_ndk = ndk_root / "linux" / f"Nuke{version}"
+        target_ndk = ndk_root / "linux" / folder_tag
         target_ndk.mkdir(parents=True, exist_ok=True)
         if common_include.exists() and not (target_ndk / "include").exists():
             shutil.copytree(common_include, target_ndk / "include", dirs_exist_ok=True)

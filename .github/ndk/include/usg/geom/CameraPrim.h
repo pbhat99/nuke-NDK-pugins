@@ -16,8 +16,6 @@
 #include "usg/base/ArrayTypes.h"
 #include "usg/geom/XformablePrim.h"
 
-#include <array>
-
 namespace usg {
 
   // class CameraPrim
@@ -130,20 +128,6 @@ namespace usg {
     float getVerticalApertureOffset(fdk::TimeValue time = fdk::defaultTimeValue()) const;
 
     // --(BEGIN CUSTOM CODE)--
-    //! Returns the world-space frustum points ordered as
-    //!  - Left bottom near
-    //!  - Right bottom near
-    //!  - Right top near
-    //!  - Left top near
-    //!  - Left bottom far
-    //!  - Right bottom far
-    //!  - Right top far
-    //!  - Left top far
-    std::array<fdk::Vec3d, 8> getFrustumPoints(fdk::TimeValue time = fdk::defaultTimeValue()) const;
-
-    //! Returns the camera's projection matrix
-    fdk::Mat4d getProjectionMatrix(fdk::TimeValue time = fdk::defaultTimeValue()) const;
-
     // --(END CUSTOM CODE)--
   };
 

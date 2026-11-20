@@ -14,15 +14,15 @@ namespace usg::hd {
   public:
     USG_HD_DECLARE_DATASOURCE(OverlayContainerDataSource)
 
-    OverlayContainerDataSource(std::vector<DataSourceHandle<ContainerDataSource>> containers);
-    OverlayContainerDataSource(const DataSourceHandle<ContainerDataSource>& src1,
-                               const DataSourceHandle<ContainerDataSource>& src2);
+    OverlayContainerDataSource(size_t count, ContainerDataSourceRefPtr* containers);
+    OverlayContainerDataSource(const ContainerDataSourceRefPtr& src1,
+                               const ContainerDataSourceRefPtr& src2);
 
     usg::TokenArray getNames() override;
-    usg::hd::DataSourceHandleBase get(const usg::Token& name) override;
+    usg::hd::DataSourceRefPtr get(const usg::Token& name) override;
 
   private:
-    std::vector<DataSourceHandle<ContainerDataSource>> _containers;
+    std::vector<usg::hd::ContainerDataSourceRefPtr> _containers;
   };
   USG_HD_DECLARE_DATASOURCE_REFPTRS(OverlayContainerDataSource)
 

@@ -110,10 +110,10 @@ namespace DD
 
       // overrides every Op virtual function:
 
-      //! Calls editVersionHash() on the Iop.
-      Hash editVersionHash() const override;
-      //! Calls setEditVersionHash() on the Iop.
-      void setEditVersionHash(const Hash& h) override;
+      //! Calls editState() on the Iop.
+      Hash editState() const override;
+      //! Calls setEditState() on the Iop.
+      void setEditState(const Hash& h) override;
 
       /*! Calls invalidate() on the Iop. */
       void _invalidate() override;
@@ -200,13 +200,13 @@ namespace DD
       bool test_input(int, Op*) const override;
 
       /*! Change the corresponding input of the wrapped op. */
-      void _setInput(int32_t i, const OpGraphLocation& connection, int32_t base, int32_t offset) override;
+      void set_input(int, Op*, int, int) override;
       void inputs(int n) override;
       using Iop::inputs;
 
       /*! Passed through to the wrapped iop. */
       void _knobStorePrep(const OutputContext&) override;
-      void _knobStorePost(const OutputContext&, Hash&, Hash&) override;
+      void _knobStorePost(const OutputContext&, Hash&) override;
       void setOutputContext(const OutputContext&) override;
       void append(Hash&) override;
 

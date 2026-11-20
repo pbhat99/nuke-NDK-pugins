@@ -9,6 +9,12 @@
 
 namespace fdk {
 
+  template <typename T> class Mat4;
+
+
+  //------------------------------------------------------------------------------
+
+
   //! \class fdk::Box2
   //! Axis-aligned 2D bounding-box (AABB)
   template <typename T>
@@ -671,6 +677,11 @@ namespace fdk {
     return Box2<T>(b0.min * invtT + b1.min * tT,
                    b0.max * invtT + b1.max * tT);
   }
+
+  extern template class FDK_API Box2<fdk::half>;
+  extern template class FDK_API Box2<int>;
+  extern template class FDK_API Box2<float>;
+  extern template class FDK_API Box2<double>;
 
 }
 

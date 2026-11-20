@@ -48,13 +48,14 @@ namespace DD
 {
   namespace Image
   {
+    class Authoring;
+    class AuthoringSettings;
     class Op;
     class OutputContext;
     class Hash;
     class Format;
     class Knob_Closure;
     class Box;
-    class Authoring;
     class ArrayKnobI;
     class ResizableArrayKnobI;
     class Enumeration_KnobI;
@@ -62,7 +63,6 @@ namespace DD
     class Colorspace_KnobI;
     class SceneView_KnobI;
     class SceneGraph_KnobI;
-    class USDSceneGraph_KnobI;
     class MultiArray_KnobI;
     class List_KnobI;
     class Table_KnobI;
@@ -84,7 +84,6 @@ namespace DD
     class LinkKnobI;
     class Path_KnobI;
     class HandleContextImpl;
-    class PathExpression_KnobI;
     
     using AssetInfo = ndk::asset::AssetInfo;
     using AssetData = ndk::asset::AssetData;
@@ -95,7 +94,6 @@ namespace DD
     class KnobChangeGroup;
     class Knob;
     class KnobImpl;
-    class KnobHelpers;
 
     using KnobSet = std::unordered_set<Knob*>;
 
@@ -134,7 +132,8 @@ namespace DD
      */
     class DDImage_API Knob : public ValueStuffI
     {
-      friend class DD::Image::KnobChangeGroup;
+      friend class KnobChangeGroup;
+      friend class KnobImpl;
       std::unique_ptr<KnobImpl> _pImpl;
 
       /// noncopy and nonassign
@@ -266,11 +265,6 @@ namespace DD
         return nullptr;
       }
 
-      virtual USDSceneGraph_KnobI* usdSceneGraphKnob()
-      {
-        return nullptr;
-      }
-
       virtual SceneView_KnobI* sceneViewKnob()
       {
         return nullptr;
@@ -376,16 +370,11 @@ namespace DD
         return nullptr;
       }
 
-      virtual PathExpression_KnobI* pathExpressionKnob()
-      {
-        return nullptr;
-      }
-
       VersionNumbers* version();
       VersionNumbers* version() const;
 
       Node* node() const { return node_; }
-      void set_node(Node* n) { node_ = n; }
+      void set_node(Node* n) { node_ = n; } // kludge for clones, do not use!
 
       /*! Return an Op that belongs to the control panel this Knob is
           on. You cannot make very many assumptions about this op except
@@ -505,8 +494,6 @@ namespace DD
       static constexpr const FlagMask  FROM_ASSET               = 0x0010000000000000; ///< This knob's value is supplied from an asset
       static constexpr const FlagMask  RESERVED_NUMERIC_KNOB    = 0x0020000000000000; ///< DO NOT USE. This value is used by numeric knobs.
 
-      static constexpr const FlagMask  EXPRESSION_NO_ANIM       = 0x0040000000000000; ///< Special case for several root knobs. Enables expressions only on a knob but disables frame variable usage. frame, t and x variables will evaluate to 0 and the expression editor popup will show an error message to the user.
-
       // 
       // Knob type-specific flags.
       // These should be in the range < 0x80.
@@ -540,7 +527,6 @@ namespace DD
       static constexpr const FlagMask SINGLE_SELECTION_ONLY     = 0x0000000000000001; ///< Knob only allows one item to be selected at a time
       static constexpr const FlagMask SHOW_BUTTONS              = 0x0000000000000002; ///< Show Add Layer/Delete Layer buttons
       static constexpr const FlagMask SHOW_SCENE_PICK_BUTTON    = 0x0000000000000008; ///< Show Scene Graph Dialog button to choose Prim(s) from the Scene
-      static constexpr const FlagMask SHOW_SELECT_PATHS_BUTTON  = 0x0000000000000010; ///< For PathExpression knobs - show Select Path button to select prims in mask.
 
       // BeginGroup
       static constexpr const FlagMask  CLOSED                   = 0x0000000000000001; ///< Stores the open/closed state of group knobs (group knobs).
@@ -669,68 +655,15 @@ namespace DD
          animated value must do this.
        */
       virtual void updateUI(const OutputContext&);
-
-      //! DEPRECATED - Please use NotificationCallbackReason for notifications
-      //! or VisibilityCallback for visibility query.
-      enum
-        //mFnDeprecatedInNuke17("Move to addNotificationCallback/addVisibilityCallback")
-        LegacyCallbackReason {
+      enum CallbackReason { // signals to widgets
         kDestroying,
-        kIsVisible, // Visibility query requires return value
+        kIsVisible, // Uses return value
         kUpdateWidgets,
         kChanged
       };
-
-      //! DEPRECATED - Please use NotificationCallbackReason with
-      //! addNotificationCallback or addVisibilityCallback.
-      //!
-      //! CallbackReason is available for backwards compatibility during
-      //! deprecation.
-      using CallbackReason = LegacyCallbackReason;
-
-      //! Notification callbacks for knob and widget signals
-      enum NotificationCallbackReason {
-        kNotification_Destroying,
-        kNotification_UpdateWidgets,
-        kNotification_Changed
-      };
-
-      typedef int (*LegacyCallback)(void* closure, LegacyCallbackReason);
-
-      /// Functor from which to derive to provide knob notification callbacks.
-      struct NotificationCallbackFunctor {
-        /// The destructor will be called when removing callbacks.
-        virtual ~NotificationCallbackFunctor() {};
-        /// operator== is required to identify callbacks.
-        /// This is guaranteed only to be called with the same type so use:
-        /// const MyFunctor& myFunctor = static_cast<const MyFunctor&>(cb);
-        virtual bool operator==(const NotificationCallbackFunctor& cs) const = 0;
-        /// Implement this function to receive callbacks.
-        virtual int operator()(NotificationCallbackReason) const = 0;
-        /// Add member variables to provide callback parameters.
-      };
-
-      /// Functor from which to derive to provide knob visibility callbacks.
-      struct VisibilityCallbackFunctor {
-        /// The destructor will be called when removing callbacks.
-        virtual ~VisibilityCallbackFunctor() {};
-        /// operator== is required to identify callbacks.
-        /// This is guaranteed only to be called with the same type so use:
-        /// const MyFunctor& myFunctor = static_cast<const MyFunctor&>(cb);
-        virtual bool operator==(const VisibilityCallbackFunctor& cs) const = 0;
-        /// Implement this function to receive callbacks.
-        virtual int operator()() const = 0;
-        /// Add member variables to provide callback parameters.
-      };
-
-      //! DEPRECATED - We allow use of the deprecated interface for now.
-      //! Please migrate to the new notification and query callbacks.
-      using Callback = LegacyCallback;
+      typedef int (*Callback)(void* closure, CallbackReason);
 
       /*!
-         DEPRECATED - Please use addNotificationCallback or
-         addVisibilityCallback.
-
          Add a callback to a GUI widget. Changes to the knob's visibility,
          enable, the value, and the destruction of the knob all send
          messages to this.
@@ -739,68 +672,18 @@ namespace DD
          you are required to return a valid response for all query reasons. If
          more than one callback is provided, the result is any_of(ret_value).
        */
-      mFnDeprecatedInNuke17("Move to addNotificationCallback/addVisibilityCallback")
-      void addCallback(LegacyCallback cb, void* closure);
+      void addCallback( Callback cb, void* closure );
 
       /*!
-         Add a notification callback to a GUI widget.
-
-         This is used for notification of state changes to the knob
-         (e.g. destruction, redrawing and value changes).
-         The callback return value is not used.
-       */
-      template<typename CallbackPackageType>
-      void addNotificationCallback(const CallbackPackageType& cs);
-
-      /*!
-         Add a visibility query callback to a GUI widget.
-
-         Visibility is determined by bool(ret_value).  If more than one callback
-         is provided, the result is any_of(ret_value).
-       */
-      template<typename CallbackPackageType>
-      void addVisibilityCallback(const CallbackPackageType& cs);
-
-      /*!
-         DEPRECATED - Please use removeNotificationCallback or
-         removeVisibilityCallback.
-
          Remove a callback added with addCallback(). You must not call
          this if your callback got the kDestroying message.
        */
-      mFnDeprecatedInNuke17("Move to removeNotificationCallback/removeVisibilityCallback")
-      void removeCallback( LegacyCallback cb, void* closure );
+      void removeCallback( Callback cb, void* closure );
 
       /*!
-         Remove a callback added with addNotificationCallback(). You must not
-         call this if your callback got the kDestroying message.
-       */
-      void removeNotificationCallback( const NotificationCallbackFunctor& cs );
-
-      /*!
-         Remove a callback added with addVisibilityCallback(). You must not call
-         this if your callback got the kDestroying message.
-       */
-      void removeVisibilityCallback( const VisibilityCallbackFunctor& cs );
-
-      /*!
-         DEPRECATED - Please use isNotificationCallbackRegistered or
-         isVisibilityCallbackRegistered.
-
          Check if a callback was registered.
        */
-      mFnDeprecatedInNuke17("Move to isNotificationCallbackRegistered/isVisibilityCallbackRegistered")
-      bool isCallbackRegistered( LegacyCallback cb, void* closure ) const;
-
-      /*!
-         Check if a notification callback was registered.
-       */
-      bool isNotificationCallbackRegistered( const NotificationCallbackFunctor& cs ) const;
-
-      /*!
-         Check if a visibility callback was registered.
-       */
-      bool isVisibilityCallbackRegistered( const VisibilityCallbackFunctor& cs ) const;
+      bool isCallbackRegistered( Callback cb, void* closure ) const;
 
 
       /*! \fn bool Knob::isEnabled() const;
@@ -835,7 +718,10 @@ namespace DD
        */
       virtual bool isReadOnly() const;
 
-      virtual void setReadOnly(bool value);
+      void setReadOnly(bool value)
+      {
+        set_flag(Knob::READ_ONLY, value);
+      }
 
       /*! Return true if this knob is read-only in scripts.  The default implementation
        *  tests for the READ_ONLY_IN_SCRIPTS flag.  In this mode, attempts to modify
@@ -1408,8 +1294,8 @@ namespace DD
           and calls Knob::changed() when that data changes. Some that don't
           are called 'compound' knobs, like AxisKnob, which consist of child
           knobs where the actual data is stored. These knobs should implement
-          editVersionHash() and return the edit versions of the children
-          combined together.
+          editState() and return the edit versions of the children combined 
+          together.
       */
       int editVersion() const;
 
@@ -1420,7 +1306,7 @@ namespace DD
 
           Base class returns the hash of the _editVersion integer.
       */
-      virtual Hash editVersionHash() const;
+      virtual Hash editState() const;
 
       /*!
          Sometimes (especially in subclasses) you know that only the
@@ -1708,9 +1594,7 @@ namespace DD
           number of keyframes. This is used to update the tick mark display
           in the Viewer frame slider.  The base class returns zero. */
       virtual int get_key_list(std::set<int>& keylist) const;
-      virtual int get_key_list(std::set<int>& keylist, std::set<int>& predictedKeylist) const;
       virtual int get_key_list(std::set<int>& keylist, int index) const;
-      virtual int get_key_list(std::set<int>& keylist, std::set<int>& predictedKeylist, int index) const;
 
       virtual bool splitForViews() const { return false; }
       virtual ViewSet storedViews() const { return ViewSet(0); }
@@ -1794,45 +1678,18 @@ namespace DD
        */
       bool to_bool(const char*, bool& result);
 
-      //-----------------------------------------------------------------
-
-      //! Assigns the authoring handler to the knob. If the handler is non-null
-      //! and has at least one authoring mode enabled then authoring is
-      //! considered enabled on this knob.
-      //! Setting this to null effectively disables the authoring controls for
-      //! this knob.
-      void setAuthoring(Authoring* handler);
+      //! Initialises and sets the authoring settings on the knob
+      //! Passing in an AuthoringSettings with an empty modes list will
+      //! remove the authoring from the node
+      //! @param settings copies settings
+      //! @return True if the authoring was set, False if it was not set or removed
+      bool setAuthoring(const AuthoringSettings& settings);
 
       //! Gets the attribute authoring controls - these modify the way
       //! attributes are written and overridden in the 3D system.
       //! @return Authoring functionality, or nullptr if authoring isn't set
       const Authoring* getAuthoring() const;
-            Authoring* getAuthoring();
-
-      //! Return the default authoring mode enum, if enabled. Cast to Authoring::Mode.
-      int getDefaultAuthoringMode() const;
-
-      //! Return the current authoring mode enum, if enabled. Cast to Authoring::Mode.
-      int getAuthoringMode() const;
-
-      //! Change the currently-assigned authoring handler's mode, if there is one.
-      //! Cast Authoring::Mode to int.
-      //! Returns true if the mode was changed.
-      bool setAuthoringMode(int authoringModeEnum);
-
-      //! Reset the mode to the default, returning true if it changed.
-      bool resetAuthoringModeToDefault();
-
-      //! True if authoring set AND we have any enabled modes.
-      bool isAuthoringEnabled() const;
-
-      //! Return true if all authoring modes in the mask are enabled.
-      //! Optionally check if the current mode is also the one specified (if anything but Invalid).
-      //! Cast Authoring::ModeMask and Authoring::Mode to int.
-      bool hasEnabledAuthoringModes(int enabledMask,
-                                    int currentMode = 3 /* Authoring::Mode::Invalid */) const;
-
-      //-----------------------------------------------------------------
+      Authoring* getAuthoring();
 
       struct TclSharedAlloc;
 
@@ -2046,33 +1903,18 @@ namespace DD
       Knob* _undoer;
       void* _pyobj;
 
-      Authoring* _authoring;
+      std::unique_ptr<Authoring> _authoring;
       std::unique_ptr<AssetInfo> _assetInfo;
 
-      int doLegacyCallbacks(LegacyCallbackReason reason) const; // DEPRECATED
-      int doNotificationCallbacks(NotificationCallbackReason reason) const;
-      int doVisibilityCallbacks() const;
+      int doCallbacks( CallbackReason reason ) const;
 
       typedef struct
       {
-        LegacyCallback _callback;
+        Callback  _callback;
         void* _userData;
-      } LegacyCallbackPackage;
+      } CallbackPackage;
 
-      void addNotificationCallbackInternal(const NotificationCallbackFunctor* cs);
-      void addVisibilityCallbackInternal(const VisibilityCallbackFunctor* cs);
-
-      mutable std::vector<LegacyCallbackPackage>*             _legacyCallbacks;
-      mutable std::list<const NotificationCallbackFunctor*>*  _notificationCallbacks;
-      mutable std::list<const VisibilityCallbackFunctor*>*    _visibilityCallbacks;
-
-      mutable std::list<const NotificationCallbackFunctor*>   _activeNotificationCallbacks;
-      mutable std::list<const VisibilityCallbackFunctor*>     _activeVisibilityCallbacks;
-
-      mutable std::list<const NotificationCallbackFunctor*>   _pendingRemoveNotificationCallbacks;
-      mutable std::list<const VisibilityCallbackFunctor*>     _pendingRemoveVisibilityCallbacks;
-
-      friend class KnobHelpers;
+      mutable std::vector<CallbackPackage>* _callbacks;
     };
 
     DDImage_API std::ostream& operator<<(std::ostream& o, const Knob::cstring& c);
@@ -2193,21 +2035,6 @@ namespace DD
   } // namespace Image
 } // namespace DD
 
-template <typename CallbackPackageType>
-void DD::Image::Knob::addNotificationCallback(const CallbackPackageType& cs)
-{
-  // Create a callback package on the heap
-  CallbackPackageType* pPayload = new CallbackPackageType(cs);
-  addNotificationCallbackInternal(pPayload);
-}
-
-template <typename CallbackPackageType>
-void DD::Image::Knob::addVisibilityCallback(const CallbackPackageType& cs)
-{
-  // Create a callback package on the heap
-  CallbackPackageType* pPayload = new CallbackPackageType(cs);
-  addVisibilityCallbackInternal(pPayload);
-}
 
 #if !defined(FN_COMPILER_INTEL) && defined(FN_OS_WINDOWS)
 #  pragma warning(pop) // reenable 4251: needs to have dll-interface to be used by clients of <X>s to have dll-interface to be used by clients of <X>

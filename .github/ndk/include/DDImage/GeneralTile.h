@@ -7,8 +7,6 @@
 #include "DDImage/Box.h"
 #include "DDImage/ChannelSet.h"
 
-#include <atomic>
-
 namespace DD {
   namespace Image {
 
@@ -166,8 +164,6 @@ namespace DD {
       bool _wantPacked;
       std::set<ChannelSet> _allPlanes;
 
-      std::atomic<unsigned int> _loadRangeRefCount = 0;
-      
     private:
       void freeImagePlaneCache();
       void init(bool loadOnDemand, Iop& input, const Box& pBox, const ChannelSet& channels,

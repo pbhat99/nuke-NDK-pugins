@@ -11,8 +11,6 @@
 #include <vector>
 
 namespace usg {
-  class Path;
-
   //! A wrapper for SdfPathExpression
   class USG_API PathExpr
   {
@@ -40,9 +38,6 @@ namespace usg {
     //! Cannot return a reference since this is created on request
     //! and not returned by reference by the SdfPathExpression GetText.
     std::string asString() const;
-    //! Return a new expression created by making any relative path prefixes in this expression
-    //! absolute.
-    PathExpr makeAbsolute(const Path& anchor) const;
 
     //! Get the underlying SdfPathExpression
     PathExpr::Handle&       getPathExpr(int usd_version);

@@ -165,14 +165,9 @@ namespace usg
     */
     Value::Type          getValueType() const;
 
-    //! Does the property have a valid Sdf type assignment? If not the type name
-    //! will be 'token' which is not a valid shader property type.
-    bool                 hasSdfValueType() const;
-
-    /*! Return the converted type from GetTypeAsSdfType() as a property
-        Value::Type enumeration. Only valid when type name is a recognized Sdr
-        type. Check hasSdfValueType() to confirm the returned type is a valid
-        Sdr match.
+    /*! Return the converted type from GetType() into a SdfValueTypeName as a
+        property Value::Type enumeration. Only valid if type name is a
+        recognized type.
     */
     Value::Type          getSdfValueType() const;
 

@@ -34,9 +34,38 @@ namespace ndk {
                             const fdk::Vec2f&     screenWindowSt,
                             float                 distance) const override;
 
-    float linearZToDistance(const Camera::Sample& cameraContext,
-                            const fdk::Vec2f&     screenWindowSt,
-                            float                 linearZ) const override;
+    void project(const Camera::Sample&         cameraContext,
+                 const ProjectionImageContext& imageContext,
+                 uint32_t                      nVerts,
+                 ProjectCoord*                 vertArray) const override;
+
+    void generateRayGeometry(uint32_t                      nRays,
+                             const ProjectCoord*           screenCoords,
+                             const Camera::Sample*         cameraContexts,
+                             const ProjectionImageContext& imageContext,
+                             RayContext*                   raysOut) const override;
+  };
+
+
+  //----------------------------------------------------------------------
+
+
+  /*! Linear lens projection with distortion support, describable via
+      a base 4x4 matrix and abc polynomial distort parameters.
+  */
+  class NDK_API WarpedLinearProjection : public LinearProjection
+  {
+    double  distortA;     //!< Distortion a polynomial
+    double  distortB;     //!< Distortion b polynomial
+    double  distortC;     //!< Distortion c polynomial
+
+  public:
+    WarpedLinearProjection();
+
+    const char* identifier() const override { return "WarpedLinear"; }
+    bool isLinear() const override { return false; }
+
+    void  _validateProjection() override;
 
     void project(const Camera::Sample&         cameraContext,
                  const ProjectionImageContext& imageContext,
@@ -47,7 +76,7 @@ namespace ndk {
                              const ProjectCoord*           screenCoords,
                              const Camera::Sample*         cameraContexts,
                              const ProjectionImageContext& imageContext,
-                             RayContext**                  raysOut) const override;
+                             RayContext*                   raysOut) const override;
   };
 
 
@@ -76,7 +105,7 @@ namespace ndk {
                              const ProjectCoord*           screenCoords,
                              const Camera::Sample*         cameraContexts,
                              const ProjectionImageContext& imageContext,
-                             RayContext**                  raysOut) const override;
+                             RayContext*                   raysOut) const override;
   };
 
 
@@ -105,7 +134,7 @@ namespace ndk {
                              const ProjectCoord*           screenCoords,
                              const Camera::Sample*         cameraContexts,
                              const ProjectionImageContext& imageContext,
-                             RayContext**                  raysOut) const override;
+                             RayContext*                   raysOut) const override;
   };
 
 } // namespace ndk

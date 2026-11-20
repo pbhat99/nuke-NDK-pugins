@@ -54,11 +54,6 @@ namespace DD
     //! sample methods. This is generally more efficient than making many calls to
     //! Iop::sample although it may render more than you need from  the input if
     //! you don't sample all of the requested box.
-    //! 
-    //! Important Note - this class is not thread safe and should not be shared between
-    //! multiple engine threads, as the underlying tile cache may crash. Each engine
-    //! thread should have its own Sampler copy, but if sharing the Sampler cannot be
-    //! avoided then it's better to use Iop::sample() which is slower but thread safe.
     class DDImage_API Sampler {
     public:
       //! What to do when sampling off the edges of the input
@@ -68,39 +63,21 @@ namespace DD
         eEdgeFromIop, // Use Iop's black_outside setting
       };
 
-      //! Construct a Sampler.
-      //!
-      //! If \a filter isn't specified at construction time then it must be supplied as an argument
-      //! to any later calls to sample() instead.
-      //! \a needsThreadSafety should be set to true if the sampler needs to support concurrent
-      //! access from multiple threads. Note that this comes with a small performance overhead
-      //! so should only be set if it is actually needed.
-      Sampler( Iop* iop, int x, int y, int r, int t, const ChannelSet& channels, Filter* filter = nullptr, EdgeHandling edges = eEdgeFromIop, InterestRatchet* ir = nullptr, bool loadOndemand = true, bool needsThreadSafety = false);
-      Sampler( Iop* iop, const Box& box, const ChannelSet& channels, Filter* filter = nullptr, EdgeHandling edges = eEdgeFromIop, InterestRatchet* ir = nullptr, bool loadOnDemand = true, bool needsThreadSafety = false);
+      // Note: if no filter is specified at construction time then it must be supplied as an argument to any later calls to sample() instead.
+      Sampler( Iop* iop, int x, int y, int r, int t, const ChannelSet& channels, Filter* filter = nullptr, EdgeHandling edges = eEdgeFromIop, InterestRatchet* ir = nullptr, bool loadOndemand = true);
+      Sampler( Iop* iop, const Box& box, const ChannelSet& channels, Filter* filter = nullptr, EdgeHandling edges = eEdgeFromIop, InterestRatchet* ir = nullptr, bool loadOnDemand = true);
       ~Sampler();
 
       Iop* iop() const;
       const Format& format() const;
       const ChannelSet& channels() const;
-
-      //! Default filter to use if no filter is provided to sample methods.
       Filter* filter() const;
 
-      //! Override the default filter provided to constructor, if any.
-      void setFilter(Filter* filter);
-
-      //-------------------------------------------------
-
-      //! Sample a single pixel, with edge clipping but no filtering.
+      //! Sample a single pixel, with edge clipping.
       float at(int x, int y, Channel z) const;
-
-      //! Same except samples \a get channels.
       void at(int x, int y, const ChannelSet& get, Pixel& out) const;
-
       //! Same except samples out.channels.
       void at(int x, int y, Pixel& out) const;
-
-      //-------------------------------------------------
 
       //! Sample a parallelogram. It is centered on \a center and the length of the two axis are
       //! given by \a dU and \a dV. The channels requested by \a get are put into \a out.
@@ -126,14 +103,6 @@ namespace DD
       //! Same except the filter used is the pre-assigned one and samples out.channels.
       void  sample(float cx, float cy, float W, float H, Pixel& out);
 
-      //-------------------------------------------------
-
-      //! Specialized version for two-pass sampling and uses the filter that was previously specified
-      //! when the sampler was constructed.
-      void  sample(const SamplePosition& samplePosition, Pixel& out);
-
-      //-------------------------------------------------
-
       //! Specialized version for texture sampling where \a UV is a texture coordinate between 0..1
       //! to be fitted into the Format, and \a dU and \a dV are its partial derivatives.
       //! ChannelSet \a get is provided separately so that a subset of \a out can be filled without
@@ -143,17 +112,10 @@ namespace DD
                             const fdk::Vec3f& dV,
                             Filter*           filter,
                             const ChannelSet& get,
-                            Pixel&            out) const;
+                            Pixel&            out);
 
-      //! Same but samples a single channel at a time. This has a slightly higher per-Channel setup
-      //! overhead cost but avoids the need to dynamically create Pixels in high performance code
-      //! only needing to filter a single channel.
-      //! Avoid calling this from inside a ChannelSet/ChannelPack loop.
-      float  sampleTextureUV(const fdk::Vec3f& UV,
-                             const fdk::Vec3f& dU,
-                             const fdk::Vec3f& dV,
-                             Filter*           filter,
-                             Channel           chan) const;
+      //! This version is used for two-pass sampling and uses the filter that was previously specified when the sampler was constructed.
+      void  sample(SamplePosition& samplePosition, Pixel& out);
 
     private:
       std::unique_ptr<class SamplerImpl> _pImpl;

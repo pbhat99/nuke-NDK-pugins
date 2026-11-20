@@ -13,9 +13,7 @@
 #define FN_SHARED_EXPORT __attribute__ ((visibility("default")))
 #endif
 
-#ifndef mFnSharedObjectExport
-#define mFnSharedObjectExport FN_SHARED_EXPORT
-#endif
+#define mFnSharedObjectExport FN_SHARED_EXPORT 
 
 #ifndef FN_SHARED_IMPORT
 #define FN_SHARED_IMPORT

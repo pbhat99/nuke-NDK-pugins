@@ -16,7 +16,7 @@ namespace DD
 
     class GeoReader;
     class GeoDescription;
-    using GeoReaderFormat = FileReaderFormat;
+    class DDImage_API GeoReaderFormat : public ReaderFormat {};
 
     /*!
        Returns geometry from the outside world. The geometry is identified
@@ -54,7 +54,7 @@ namespace DD
       char* full_geometry_filename;
       int full_geometry_version;
       Hash full_geometry_filehash;
-      FileReaderFormat* _fileformat;
+      GeoReaderFormat* _fileformat;
       const GeoDescription* _reader_type;
       std::string _errorMessage;
     protected:

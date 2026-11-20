@@ -18,8 +18,6 @@
 
 #include "fdk/math/Ray.h"
 #include "ndk/geo/utils/Intersect.h"
-
-#include "usg/geom/MeshPrim.h"
  
 #include <memory>
 #include <vector>
@@ -38,10 +36,6 @@ struct KnobSelectionRecord;
 
 namespace usg {
   class Prim;
-}
-
-namespace ndk {
-  struct MeshTopology;
 }
 
 namespace DD {
@@ -446,9 +440,6 @@ namespace DD {
 
       // indicates whether the 3D viewer grid should be drawn
       bool _showViewerGrid;
-      bool _showCameras = true;
-      bool _showLighting = true;
-      bool _showAxis = true;
 
       // This portion is for draw & add_handle callbacks:
       DD::Image::ViewerEvent event_;
@@ -809,18 +800,6 @@ namespace DD {
       bool showViewerGrid() const { return _showViewerGrid; }
       /*! Sets whether the 3D viewer grid should be drawn. */
       void showViewerGrid(bool show) { _showViewerGrid = show; }
-      /*! True if cameras should be shown in the 3D viewer. */
-      bool showCameras() const { return _showCameras; }
-      /*! Sets whether cameras should be shown in the 3D viewer. */
-      void showCameras(const bool show) { _showCameras = show; }
-      /*! True if lights should be shown in the 3D viewer. */
-      bool showLighting() const { return _showLighting; }
-      /*! Sets whether lights should be shown in the 3D viewer. */
-      void showLighting(const bool show) { _showLighting = show; }
-      /*! True if axis should be shown in the 3D viewer. */
-      bool showAxis() const { return _showAxis; }
-      /*! Sets whether axis should be shown in the 3D viewer. */
-      void showAxis(const bool show) { _showAxis = show; }
 
       /*! A Knob handle callback can call this to make a popup menu. This
           is a little complex in order to allow a single menu item to modify
@@ -1223,13 +1202,6 @@ namespace DD {
       void setSelectionAction(Select3DAction action);
       void setOcclusionTest(bool enabled);
       void setSelectionFilters3D(const SelectionFilters& filters);
-
-      // Returns a reference to the cached mesh topology for the current selection
-      // and time. The topology is built and cached on demand.
-      const ndk::MeshTopology& selectionMeshTopologyCache(const usg::MeshPrim& meshPrim, double time);
-
-      // Clear the cached mesh topology if stage has changed or if viewer context is destroyed.
-      void clearSelectionMeshTopologyCache();
 
       virtual float gamma() const;
       virtual float gain() const;

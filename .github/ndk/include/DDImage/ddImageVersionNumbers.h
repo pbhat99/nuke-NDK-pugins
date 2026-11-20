@@ -1,4 +1,4 @@
-/** \file ddImageVersionNumbers.h
+/** \file ddImageVersionNumbers.h 
   Version numbers. These are compile-time constants that plugin
   source code can use in compiler directives.
 
@@ -8,16 +8,16 @@
 */
 #ifndef _DDImageVersionNumber_h_
 #define _DDImageVersionNumber_h_
-#define kDDImageVersion "17.1"
-#define kDDImageVersionInteger (10000 * 17 + 1000 * 1 + 2)
-#define kDDImageVersionMajorNum 17
-#define kDDImageVersionMinorNum 1
-#define kDDImageVersionReleaseNum 2
-#define kDDImageVersionReleaseStr "v2"
+#define kDDImageVersion "16.0"
+#define kDDImageVersionInteger (10000 * 16 + 1000 * 0 + 9)
+#define kDDImageVersionMajorNum 16
+#define kDDImageVersionMinorNum 0
+#define kDDImageVersionReleaseNum 9
+#define kDDImageVersionReleaseStr "v9"
 #define kDDImageVersionPhase DD::Image::Version::eRelease
 #define kDDImageVersionPhaseNum 3
 #define kDDImageVersion64Bit true
-#define kDDImage_ABI_version DDImage_ABI_17_1_1
+#define kDDImage_ABI_version DDImage_ABI_16_0_1
 #ifndef kDDImageBuildTargetOS
 # define kDDImageBuildTargetOS "win"
 #endif

@@ -14,10 +14,6 @@
 
 namespace usg
 {
-  int USG_API usdAPIMajorVersion();
-  int USG_API usdAPIMinorVersion();
-  int USG_API usdAPIPatchVersion();
-  int USG_API usdAPIVersion();
 
   //! An object which can hold many types of value.
   class USG_API Value
@@ -163,8 +159,7 @@ namespace usg
     //! Gets type name from Type enum.
     static const std::string&  getTypeName(Type type);
 
-    //! Returns the given Type's non-aliased, scalar Type enumeration (e.g. Float3 for
-    //! Color3fArray).
+    //! Returns this Type's non-aliased Type enumeration (ie base type of a Color3f is Float3)
     static Type                getBaseType(Type type);
 
     //! Returns this Type's base DataType enumeration (ie data type of a Color3f is FLOAT_DATA)
@@ -205,13 +200,6 @@ namespace usg
 
     // Convenience for const char* (stores as Type::String)
     explicit Value(const char* data);
-
-    //! Convenience for converting an array of doubles into a Value of Type \a type, casting
-    //! each double in the source array to the data type for \a type. Only works for non-Array
-    //! numeric types (Float, Float2, Double4, Matrix, etc.)
-    //!
-    //! Automatic conversion to string based Types is not supported.
-    explicit Value(Type type, const double* data, int32_t n = 1);
 
     //------------------------------------------------------
 
@@ -276,20 +264,13 @@ namespace usg
     //! Return this value's Type name.
     const std::string& getTypeName() const;
 
-    //! Return a scalar (non-array) Type enumeration for this Value's [non-aliased] Type (e.g.
-    //! Float3 for Float3Array or Float3).
+    //! Return this value's non-aliased Type enumeration.
+    //! ie if this value's Type is Color3f or Color then the base type is Float3.
     Type               getBaseType() const;
 
     //! Return this Type's base DataType enumeration.
     //! ie if this value's Type is Color3f or Color then the base data type is FLOAT_DATA.
     DataType           getBaseDataType() const;
-
-    //! Return the number of data elements in the Value. For example, 3 for a Vector3 or 16 for a Matrix4.
-    size_t             getNumDataElements() const;
-
-    //! Return the number of bytes for a data element in the Value. For example, 4 for a float or 8 for a double.
-    size_t             getBytesPerDataElement() const;
-
 
     //! Returns true if this is an array-typed value.
     bool               isArray()      const;

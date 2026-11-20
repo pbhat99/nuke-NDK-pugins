@@ -15,14 +15,11 @@
 
 #include "Build/fnAssert.h"
 #include "DDImage/Memory.h"
-#include "Deprecation.h"
 
 //! Macro that creates an STL allocator class with pointer to instance of an allocator
 #define mFnCreateInstanceSTLAllocator(STLInstanceClassName, AllocatorType)                \
   template < class T >                                                                    \
-  class                                                                                   \
-  mFnDeprecatedStlAllocatorInNuke17(#STLInstanceClassName " has been deprecated. Use std::allocator instead.") \
-  STLInstanceClassName                                                                    \
+  class STLInstanceClassName                                                              \
   {                                                                                       \
   public:                                                                                 \
       typedef size_t        size_type;                                                    \
@@ -96,9 +93,7 @@
 //! compare equal, since they use the same AllocatorPtr.
 #define mFnCreateGlobalSTLAllocator(STLAllocatorName, AllocatorPtr)                       \
   template < class T >                                                                    \
-  class                                                                                   \
-  mFnDeprecatedStlAllocatorInNuke17(#STLAllocatorName " has been deprecated. Use std::allocator instead.") \
-  STLAllocatorName                                                                        \
+  class STLAllocatorName                                                                  \
   {                                                                                       \
   public:                                                                                 \
     typedef size_t        size_type;                                                      \

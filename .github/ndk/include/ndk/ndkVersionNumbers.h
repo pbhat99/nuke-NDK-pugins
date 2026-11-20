@@ -9,15 +9,15 @@
 
 #ifndef _NdkVersionNumber_h_
 #define _NdkVersionNumber_h_
-#define kNdkVersion "17.1"
-#define kNdkVersionInteger (10000 * 17 + 1000 * 1 + 2)
-#define kNdkVersionMajorNum 17
-#define kNdkVersionMinorNum 1
-#define kNdkVersionReleaseNum 2
-#define kNdkVersionReleaseStr "v2"
+#define kNdkVersion "16.0"
+#define kNdkVersionInteger (10000 * 16 + 1000 * 0 + 9)
+#define kNdkVersionMajorNum 16
+#define kNdkVersionMinorNum 0
+#define kNdkVersionReleaseNum 9
+#define kNdkVersionReleaseStr "v9"
 #define kNdkVersionPhaseNum 3
 #define kNdkVersion64Bit true
-#define kNdk_ABI_version Ndk_ABI_17_1_1
+#define kNdk_ABI_version Ndk_ABI_16_0_1
 #ifndef kNdkBuildTargetOS
 # define kNdkBuildTargetOS "win"
 #endif

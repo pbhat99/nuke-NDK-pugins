@@ -15,16 +15,10 @@ namespace usg {
   class USG_API XformOp
   {
     public:
-    /// Equivalent to USD's \c UsdGeomXformOp::Type (values and order may not match).
-    enum class Type {
+    enum Type {
+      // Keep this order as same as USD's UsdGeomXformOp::Type
       Invalid,
-      TranslateX,  // Since USD 25.02
-      TranslateY,  // Since USD 25.02
-      TranslateZ,  // Since USD 25.02
       Translate,
-      ScaleX,  // Since USD 25.02
-      ScaleY,  // Since USD 25.02
-      ScaleZ,  // Since USD 25.02
       Scale,
       RotateX,
       RotateY,
@@ -37,40 +31,31 @@ namespace usg {
       RotateZYX,
       Orient,
       Transform,
-
-      ResetXformStack,  // Unique to UPE
+      ResetXformStack
     };
 
     static Token getOpTypeToken(const XformOp::Type& type);
-    static XformOp::Type getOpTypeEnum(const Token& type);
-
     static Value::Type
     opTypeToValueType(const XformOp::Type& opType)
     {
       switch (opType) {
-        case Type::Translate:
-        case Type::Scale:
+        case Translate:
+        case Scale:
           return Value::Double3;
-        case Type::TranslateX:
-        case Type::TranslateY:
-        case Type::TranslateZ:
-        case Type::ScaleX:
-        case Type::ScaleY:
-        case Type::ScaleZ:
-        case Type::RotateX:
-        case Type::RotateY:
-        case Type::RotateZ:
+        case RotateX:
+        case RotateY:
+        case RotateZ:
           return Value::Double;
-        case Type::RotateXYZ:
-        case Type::RotateXZY:
-        case Type::RotateYXZ:
-        case Type::RotateYZX:
-        case Type::RotateZXY:
-        case Type::RotateZYX:
+        case RotateXYZ:
+        case RotateXZY:
+        case RotateYXZ:
+        case RotateYZX:
+        case RotateZXY:
+        case RotateZYX:
           return Value::Double3;
-        case Type::Orient:
+        case Orient:
           return Value::Quatd;
-        case Type::Transform:
+        case Transform:
           return Value::Matrix4d;
         default:
           return Value::InvalidType;

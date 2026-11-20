@@ -45,15 +45,15 @@ namespace DD
      */
     class DDImage_API Format : public Box
     {
-      std::string name_;
+      const char* name_;
       int width_;
       int height_;
       double pa_;
 
     public:
 
-      const char* name() const { return !name_.empty() ? name_.c_str() : nullptr; }  //!< user-visible name of format
-      void name(const char* n) { name_ = n ? n : ""; }     //!< change the name of the format
+      const char* name() const { return name_; }  //!< user-visible name of format
+      void name(const char* n) { name_ = n; }     //!< change the name of the format
 
       int width() const { return width_; }    //!< Width of image file in pixels
       void width(int v) { width_ = v; }
@@ -66,6 +66,7 @@ namespace DD
 
       Format(int w, int h, int x, int y, int r, int t, double pa = 1) {
         set(x, y, r, t);
+        name_ = nullptr;
         width_ = w;
         height_ = h;
         pa_ = pa;
@@ -73,6 +74,7 @@ namespace DD
 
       Format(int w, int h, double pa = 1) {
         set(0, 0, w, h);
+        name_ = nullptr;
         width_ = w;
         height_ = h;
         pa_ = pa;

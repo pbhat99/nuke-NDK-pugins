@@ -5,7 +5,6 @@
 #define DDImage_Description_h
 
 #include <vector>
-#include <functional>
 
 #include "ddImageVersion.h"
 
@@ -103,15 +102,14 @@ namespace DD
     class DDImage_API Description
     {
     public:
-      using DescriptionList = std::vector<Description*>;
+      typedef Node* (*NodeBuilder)(void*);
 
-      using NodeBuilder = std::function<Node*(void*)>;
+      typedef std::vector<Description*> DescriptionList;
 
     private:
       /*! Non-inline portion of ctor() */
       void ctor2(void (* f)(Description*));
       void ctor2(void (* f)(Description*), NodeBuilder nodeBuilder);
-
     protected:
       /*! Subclasses should call this as part of their constructor. These
          constructors should be written in-line so that the compile-time
@@ -130,7 +128,6 @@ namespace DD
         compiled = __DATE__ " for " kDDImageVersion;
         ctor2(f, nodeBuilder);
       }
-
     public:
       const char* compiled; /*!< Date and DD_IMAGE_VERSION_LONG this was compiled for */
       const char* plugin; /*!< Set to the plugin filename */

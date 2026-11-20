@@ -38,7 +38,6 @@ namespace DD
       };
       ParentType _missingParentType = ParentType::Xform;             //! The type for missing parent prims we create
       bool _createMissingParents = true;                             //! Whether to create the missing parent prims or not
-      bool _selectable = true;
       
       SnapKnobs _snapKnobs;
 
@@ -48,10 +47,10 @@ namespace DD
       {
       protected:
 
-        SourceEngine(GeomOpNode* parent);
+        SourceEngine(Op* parent);
 
         //!
-        SourceGeomOp* sourceGeomOp() const { return reinterpret_cast<SourceGeomOp*>(firstOp()); }
+        SourceGeomOp* sourceGeomOp() const { return reinterpret_cast<SourceGeomOp*>(_firstOp); }
 
         //! Initializes the scene state then calls the subclass createPrims().
         void  processScenegraph(usg::GeomSceneContext& context) override;
@@ -81,8 +80,8 @@ namespace DD
 
     public:
       //! Constructs a SourceGeomOp with a single texture input.
-      SourceGeomOp(Node*               node,
-                   GeomOpEngineBuilder engineBuilder);
+      SourceGeomOp(Node*                 node,
+                   GeomOpEngine::Builder engine_ctor);
 
       const char* Class() const override;
       const char* node_help() const override;
@@ -146,17 +145,11 @@ namespace DD
       //! Base class does nothing.
       virtual void addSourceKnobs(Knob_Callback f) {}
 
-      //! Adds knobs to do with display e.g. whether the geometry should be selectable.
-      virtual void addDisplayOptionsKnobs(Knob_Callback f);
-
       //!
       int knob_changed(Knob* k) override;
 
       //!
       void appendGeomState(DD::Image::Hash& op_hash) override;
-
-      //! Whether the geometry the node is managing should be pickable in the Viewer.
-      bool selectable() const override;
 
       //------------------------------------------------------
 

@@ -117,16 +117,19 @@ def build_single_plugin(plugin, platform_name, nuke_version, ndk_dir, root_dir):
     src_dir = root / plugin["source"]
     platform_tag, ext = get_platform_tag(platform_name)
     
-    deploy_dir = root / "COMPILED" / platform_tag / f"Nuke{nuke_version}" / plugin["target"]
+    v_clean = nuke_version.lower().replace("nuke", "")
+    folder_tag = f"Nuke{v_clean}"
+
+    deploy_dir = root / "COMPILED" / platform_tag / folder_tag / plugin["target"]
     deploy_dir.mkdir(parents=True, exist_ok=True)
     
-    tmp_build = root / "_build_tmp" / f"{plugin['id']}_{platform_tag}_{nuke_version}"
+    tmp_build = root / "_build_tmp" / f"{plugin['id']}_{platform_tag}_{v_clean}"
     if tmp_build.exists():
         shutil.rmtree(tmp_build, ignore_errors=True)
     tmp_build.mkdir(parents=True, exist_ok=True)
 
     print(f"\n{'='*70}")
-    print(f"Building [{plugin['name']}] for {platform_name} (Nuke {nuke_version})")
+    print(f"Building [{plugin['name']}] for {platform_name} (Nuke {v_clean})")
     print(f"Source : {src_dir}")
     print(f"Deploy : {deploy_dir}")
     print(f"{'='*70}")
@@ -137,7 +140,7 @@ def build_single_plugin(plugin, platform_name, nuke_version, ndk_dir, root_dir):
         "-B", str(tmp_build),
         "-S", str(src_dir),
         "-DCMAKE_BUILD_TYPE=Release",
-        f"-DNUKE_VERSION={nuke_version}",
+        f"-DNUKE_VERSION={v_clean}",
         f"-DNDKDIR={ndk_norm}",
         f"-DNuke_ROOT={ndk_norm}",
         f"-DNUKE_INSTALL_PATH={ndk_norm}"
@@ -194,7 +197,7 @@ def build_single_plugin(plugin, platform_name, nuke_version, ndk_dir, root_dir):
             print(f"  + Copied: {extra}")
 
     # Ensure target Nuke version folder has dynamic init.py
-    ensure_version_init(root / "COMPILED" / platform_tag / f"Nuke{nuke_version}", platform_tag)
+    ensure_version_init(root / "COMPILED" / platform_tag / folder_tag, platform_tag)
 
     # Clean intermediate build dir to save disk space
     shutil.rmtree(tmp_build, ignore_errors=True)

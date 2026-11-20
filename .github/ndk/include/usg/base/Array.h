@@ -22,11 +22,6 @@ namespace usg
     Array(const std::initializer_list<T>& list) : std::vector<T>(list) {}
     template<typename InputIt>
     Array(InputIt first, InputIt last) : std::vector<T>(first, last) {}
-    
-    // TODO(rk): Remove this size() after updating pybind11 to 2.12 or higher.
-    // This overriding size() is a workaround for the following issue resolved the version.
-    // https://github.com/pybind/pybind11/pull/4952
-    typename std::vector<T>::size_type size() const { return std::vector<T>::size(); }
   };
 
 }

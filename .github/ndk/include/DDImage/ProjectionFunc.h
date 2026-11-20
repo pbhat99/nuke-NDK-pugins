@@ -134,19 +134,6 @@ namespace DD
     DDImage_API
     const ProjectionFunc::Description*  CameraProjectionFuncDescription(ndk::LensProjection mode);
 
-    //! Find the list of available projection plugin names in the -current- plugin directories.
-    //! The built in projection plugins will always be first in the list so it should never
-    //! be empty. This is the list of strings used to populate a projection selector menu.
-    //!
-    //! Note that repeat calls to this will not rescan the directories by default so use \a forceRescan
-    //! if this is required.
-    DDImage_API
-    std::vector<const char*>& ProjectionPluginsList(bool forceRescan = false);
-
-    //! Projection function to use by default, which always exists, which is the standard
-    //! Perspective function. 
-    DDImage_API
-    ProjectionFunc* DefaultProjectionFunc();
 
   } // namespace Image
 } // namespace DD

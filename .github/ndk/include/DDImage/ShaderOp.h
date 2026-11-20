@@ -44,20 +44,16 @@ namespace DD
                                  public MaterialOpI
     {
     protected:
-      OpGraphLocation _overrideOp;  //!< Optional override Op to use for shader property value updating
+      Op* _overrideOp;      //!< Optional override Op to use for shader property value updating
 
 
     public:
-      //! Return the Op this interface is attached to.
-      Op* getOp() override { return this; }
+      //! Return the Op this interface is attached to, or the override Op if assigned.
+      Op* getOp() override { return (_overrideOp) ? _overrideOp : this; }
 
-      //! Returns the Op location to convert. Note that this may represent a modifier Node
-      //! below the actual Op in the nodegraph.
-      //! Default implementation returns this Op or an assigned override.
-      virtual OpGraphLocation  getShaderInstance() { return (_overrideOp) ? _overrideOp : OpGraphLocation(getOp()); }
-
-      void  setShaderInstanceOverride(const OpGraphLocation& opLocation) override { _overrideOp = opLocation; }
-      void  clearShaderInstanceOverride() override { _overrideOp = OpGraphLocation(); }
+      void setOverrideOp(Op* op) override { _overrideOp = op; }
+      void clearOverrideOp() override { _overrideOp = nullptr; }
+      Op*  getOverrideOp() const override { return _overrideOp; }
 
       //! Return this ShaderOp cast to the MaterialOpI interface, if it supports translation.
       virtual MaterialOpI*  asMaterialOp() { return nullptr; }
@@ -123,60 +119,31 @@ namespace DD
       //-------------------------------
 
       //! Create the ShaderDescs required to interface to an Iop texture source.
-      static usg::ShaderDesc*  createIopInterfaceGraph(const OpGraphLocation& opLocation,
-                                                       int32_t                outputType,
+      static usg::ShaderDesc*  createIopInterfaceGraph(Iop*                   input_iop,
+                                                       int32_t                output_type,
                                                        const MaterialContext& rtx,
-                                                       usg::ShaderDescGroup&  shaderGroup);
+                                                       usg::ShaderDescGroup&  shader_group);
 
       //! Update the ShaderDescs required to interface to an Iop texture source.
-      static void              updateIopInterfaceGraphOverrides(const OpGraphLocation& opLocation,
-                                                                int32_t                outputType,
+      static void              updateIopInterfaceGraphOverrides(Iop*                   input_iop,
+                                                                int32_t                output_type,
                                                                 const MaterialContext& rtx,
-                                                                usg::ShaderDescGroup&  shaderGroup);
+                                                                usg::ShaderDescGroup&  shader_group);
 
       //-------------------------------
 
       //! Create the ShaderDescs required to interface to a CoShader source.
-      static usg::ShaderDesc*  createCoShaderInterfaceGraph(const OpGraphLocation& opLocation,
-                                                            int32_t                outputType,
+      static usg::ShaderDesc*  createCoShaderInterfaceGraph(ShaderOp*              input_coshader,
+                                                            int32_t                output_type,
                                                             const MaterialContext& rtx,
-                                                            usg::ShaderDescGroup&  shaderGroup);
+                                                            usg::ShaderDescGroup&  shader_group);
 
       //! Update the ShaderDescs required to interface to a CoShader source.
-      static void              updateCoShaderInterfaceGraphOverrides(const OpGraphLocation& opLocation,
-                                                                     int32_t                outputType,
+      static void              updateCoShaderInterfaceGraphOverrides(ShaderOp*              input_coshader,
+                                                                     int32_t                output_type,
                                                                      const MaterialContext& rtx,
-                                                                     usg::ShaderDescGroup&  shaderGroup);
+                                                                     usg::ShaderDescGroup&  shader_group);
 
-    };
-
-
-    //------------------------------------------------------------------------
-
-
-    /*! Extension interface that adds cutout knob controls and the mappings
-        to the shader parameters.
-    */
-    class DDImage_API ShaderOpCutoutControlsI
-    {
-    public:
-      bool  cutoutModeEnabled() const { return _cutoutModeEnabled; }
-      bool  cutoutModeRemovesDataAovs() const { return _cutoutModeRemovesDataAovsEnabled; }
-
-      //! Adds cutout option controls.
-      //! Call this from a ShaderOp::knobs() method.
-      virtual void  addCutoutKnobs(Knob_Callback f);
-
-      //! Apply overrides to the shader cutout properties on \a shaderDesc.
-      //! Call this from a ShaderOp::updateShaderGraphOverrides() method.
-      virtual void  updateCutoutOverrides(ShaderOp*                           ownerShaderOp,
-                                          const MaterialOpI::MaterialContext& rtx,
-                                          usg::ShaderDesc&                    shaderDesc);
-
-
-    protected:
-      bool _cutoutModeEnabled = false;                //!< Surface acts as a cutout/holdout/matte
-      bool _cutoutModeRemovesDataAovsEnabled = false; //!< If cutout surface enabled, does depth & aovs get cut as well
     };
 
 
@@ -192,7 +159,6 @@ namespace DD
         shaders together which is common for Nuke.
     */
     class DDImage_API CoShaderOp : public ShaderOp
-                                 , public ShaderOpCutoutControlsI
     {
      public:
       CoShaderOp(Node* node) : ShaderOp(node) {}
@@ -221,20 +187,18 @@ namespace DD
     class DDImage_API CoShaderMaterialInterface : public ShaderOp
     {
      protected:
-      OpGraphLocation _baseOp;    //!< Op location to use for shader creation and type testing
+      Op* _baseOp;    //!< Op to use for shader creation and type testing
 
      public:
       static const Description description;
       const char*  Class()     const override { return "CoShaderMaterialInterface"; }
       const char*  node_help() const override { return ""; }
 
-      //! Initializes the baseOp used to create the shader graph. Note this is an
-      //! Op location and may represent a modifier Node below the actual Op in the
-      //! nodegraph.
-      CoShaderMaterialInterface(const OpGraphLocation& baseOp);
+      // Initializes the baseOp used to create the shader graph.
+      CoShaderMaterialInterface(Op* base_op);
 
       //! Returns the overrideOp or baseOp depending on what's assigned.
-      OpGraphLocation  getShaderInstance() override { return (_overrideOp) ? _overrideOp : _baseOp; }
+      Op* getOp() override { return (_overrideOp) ? _overrideOp : _baseOp; }
 
       MaterialOpI*      asMaterialOp() override { return static_cast<MaterialOpI*>(this); }
       const char*       getOutputSchema() const override;
@@ -258,21 +222,20 @@ namespace DD
         Knobs.
     */
     class DDImage_API SurfaceShaderOp : public ShaderOp
-                                      , public ShaderOpCutoutControlsI
     {
     public:
       //! Intersection testing sides mode
-      enum SideVisibilityMode
+      enum SidesMode
       {
-        SIDE_VISIBILITY_BOTH,
-        SIDE_VISIBILITY_FRONT,
-        SIDE_VISIBILITY_BACK
+        SIDES_BOTH,
+        SIDES_FRONT,
+        SIDES_BACK
       };
 
       //! Visibility traits of the surface.
       struct VisibilityTraits
       {
-        int32_t  sideVisibilityMode;      //!< Which side this material applies to (default is all)
+        int32_t  sidesMode;               //!< Which side this material applies to (default is all)
         bool     cameraVisibility;        //!< Is this surface visible to camera rays?
         bool     shadowVisibility;        //!< Is this surface visible to shadow rays?
         bool     specularVisibility;      //!< Is this surface visible to specular rays?
@@ -280,7 +243,7 @@ namespace DD
         bool     transmissionVisibility;  //!< Is this surface visible to transmitted rays?
 
         VisibilityTraits()
-          : sideVisibilityMode(SIDE_VISIBILITY_BOTH)
+          : sidesMode(SIDES_BOTH)
           , cameraVisibility(true)
           , shadowVisibility(true)
           , specularVisibility(true)

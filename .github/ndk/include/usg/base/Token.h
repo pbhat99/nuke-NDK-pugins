@@ -6,7 +6,6 @@
 #include "usg/api.h"
 #include "usg/base/Array.h"
 
-#include <cstdint>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -86,7 +85,7 @@ namespace usg {
       //! Convenience to avoid writing 'MyStaticTokens.MyToken.token().asString()'.
       const std::string& asString() const { return token().asString(); }
 
-      Token* _token{ nullptr };
+      Token* _token;
       const char* _text;
     };
 

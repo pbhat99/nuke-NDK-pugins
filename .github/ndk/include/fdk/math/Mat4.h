@@ -203,12 +203,7 @@ namespace fdk {
                               T&               radian_rZ) const;
 
     //! Return the scaling of the matrix.
-    Vec3<T>      getScale() const
-    {
-      return Vec3<T>(std::sqrt(a00*a00 + a10*a10 + a20*a20 + a30*a30),
-                     std::sqrt(a01*a01 + a11*a11 + a21*a21 + a31*a31),
-                     std::sqrt(a02*a02 + a12*a12 + a22*a22 + a32*a32));
-    }
+    Vec3<T>      getScale() const;
 
     //! Return whether all of the components are valid numbers.
     bool         isValid() const;
@@ -244,121 +239,24 @@ namespace fdk {
     /*---------------------------------------------------------*/
     /*                       Multiplication                    */
     /*---------------------------------------------------------*/
-    Mat4  operator *  (const Mat4& b) const
-    {
-      Mat4<T> m;
-      m.a00 = a00*b.a00 + a01*b.a10 + a02*b.a20 + a03*b.a30;
-      m.a10 = a10*b.a00 + a11*b.a10 + a12*b.a20 + a13*b.a30;
-      m.a20 = a20*b.a00 + a21*b.a10 + a22*b.a20 + a23*b.a30;
-      m.a30 = a30*b.a00 + a31*b.a10 + a32*b.a20 + a33*b.a30;
-
-      m.a01 = a00*b.a01 + a01*b.a11 + a02*b.a21 + a03*b.a31;
-      m.a11 = a10*b.a01 + a11*b.a11 + a12*b.a21 + a13*b.a31;
-      m.a21 = a20*b.a01 + a21*b.a11 + a22*b.a21 + a23*b.a31;
-      m.a31 = a30*b.a01 + a31*b.a11 + a32*b.a21 + a33*b.a31;
-
-      m.a02 = a00*b.a02 + a01*b.a12 + a02*b.a22 + a03*b.a32;
-      m.a12 = a10*b.a02 + a11*b.a12 + a12*b.a22 + a13*b.a32;
-      m.a22 = a20*b.a02 + a21*b.a12 + a22*b.a22 + a23*b.a32;
-      m.a32 = a30*b.a02 + a31*b.a12 + a32*b.a22 + a33*b.a32;
-
-      m.a03 = a00*b.a03 + a01*b.a13 + a02*b.a23 + a03*b.a33;
-      m.a13 = a10*b.a03 + a11*b.a13 + a12*b.a23 + a13*b.a33;
-      m.a23 = a20*b.a03 + a21*b.a13 + a22*b.a23 + a23*b.a33;
-      m.a33 = a30*b.a03 + a31*b.a13 + a32*b.a23 + a33*b.a33;
-      return m;
-    }
-
-    Mat4& operator *= (const Mat4& b)
-    {
-      Mat4<T> m;
-      m.a00 = a00*b.a00 + a01*b.a10 + a02*b.a20 + a03*b.a30;
-      m.a10 = a10*b.a00 + a11*b.a10 + a12*b.a20 + a13*b.a30;
-      m.a20 = a20*b.a00 + a21*b.a10 + a22*b.a20 + a23*b.a30;
-      m.a30 = a30*b.a00 + a31*b.a10 + a32*b.a20 + a33*b.a30;
-
-      m.a01 = a00*b.a01 + a01*b.a11 + a02*b.a21 + a03*b.a31;
-      m.a11 = a10*b.a01 + a11*b.a11 + a12*b.a21 + a13*b.a31;
-      m.a21 = a20*b.a01 + a21*b.a11 + a22*b.a21 + a23*b.a31;
-      m.a31 = a30*b.a01 + a31*b.a11 + a32*b.a21 + a33*b.a31;
-
-      m.a02 = a00*b.a02 + a01*b.a12 + a02*b.a22 + a03*b.a32;
-      m.a12 = a10*b.a02 + a11*b.a12 + a12*b.a22 + a13*b.a32;
-      m.a22 = a20*b.a02 + a21*b.a12 + a22*b.a22 + a23*b.a32;
-      m.a32 = a30*b.a02 + a31*b.a12 + a32*b.a22 + a33*b.a32;
-
-      m.a03 = a00*b.a03 + a01*b.a13 + a02*b.a23 + a03*b.a33;
-      m.a13 = a10*b.a03 + a11*b.a13 + a12*b.a23 + a13*b.a33;
-      m.a23 = a20*b.a03 + a21*b.a13 + a22*b.a23 + a23*b.a33;
-      m.a33 = a30*b.a03 + a31*b.a13 + a32*b.a23 + a33*b.a33;
-      *this = m;
-      return *this;
-    }
+    Mat4  operator *  (const Mat4& b) const;
+    Mat4& operator *= (const Mat4& b);
 
     //! Multiplies every location by d. For transforms this is not a scale,
     //! because it scales the W parameter as well, producing no change.
-    Mat4  operator *  (T d) const
-    {
-      Mat4 C;
-      const T* a = &a00;
-      T* c = &C.a00;
-      T* e = c + 16;
-      while (c < e) { *c++ = *a++ * d; }
-      return C;
-    }
-
-    Mat4& operator *= (T d)
-    {
-      T* a = &a00;
-      T* e = a + 16;
-      while (a < e) { *a++ *= d; }
-      return *this;
-    }
+    Mat4  operator *  (T d) const;
+    Mat4& operator *= (T d);
 
     Mat4  operator /  (T d) const { return (*this) *  (static_cast<T>(1) / d); }
     Mat4& operator /= (T d)       { return (*this) *= (static_cast<T>(1) / d); }
 
     //! Add each matching location.
-    Mat4  operator +  (const Mat4& B) const
-    {
-      Mat4 C;
-      const T* a = &a00;
-      const T* b = &B.a00;
-      T* c = &C.a00;
-      T* e = c + 16;
-      while (c < e) { *c++ = *a++ + *b++; }
-      return C;
-    }
-
-    Mat4& operator += (const Mat4& B)
-    {
-      T* a = &a00;
-      T* e = a + 16;
-      const T* b = &B.a00;
-      while (a < e) { *a++ += *b++; }
-      return *this;
-    }
+    Mat4  operator +  (const Mat4& b) const;
+    Mat4& operator += (const Mat4& b);
 
     //! Subtract each matching location.
-    Mat4  operator -  (const Mat4& B) const
-    {
-      Mat4 C;
-      const T* a = &a00;
-      const T* b = &B.a00;
-      T* c = &C.a00;
-      T* e = c + 16;
-      while (c < e) { *c++ = *a++ - *b++; }
-      return C;
-    }
-
-    Mat4& operator -= (const Mat4& B)
-    {
-      T* a = &a00;
-      T* e = a + 16;
-      const T* b = &B.a00;
-      while (a < e) { *a++ -= *b++; }
-      return *this;
-    }
+    Mat4  operator -  (const Mat4& b) const;
+    Mat4& operator -= (const Mat4& b);
 
 
     /*---------------------------------------------------------*/
@@ -475,11 +373,7 @@ namespace fdk {
     /*                        Identity                         */
     /*---------------------------------------------------------*/
     //! Return the identity matrix object.
-    static const Mat4& getIdentity()
-    {
-      static Mat4<T> identity = Mat4<T>(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
-      return identity;
-    }
+    static const Mat4& getIdentity();
 
     //! Set the matrix to the identity.
     void               setToIdentity() { *this = Mat4<T>::getIdentity(); }
@@ -579,24 +473,12 @@ namespace fdk {
     void         transpose();
 
     //! Scale the transformation by uniform scale \a d.
-    void         scale(T s)
-    {
-      a00 *= s; a01 *= s; a02 *= s;
-      a10 *= s; a11 *= s; a12 *= s;
-      a20 *= s; a21 *= s; a22 *= s;
-      a30 *= s; a31 *= s; a32 *= s;
-    }
+    void         scale(T d);
 
     //! Scale columns 0,1,2 by x,y,z.
-    void         scale(T x,
-                       T y,
-                       T z = static_cast<T>(1))
-    {
-      a00 *= x; a01 *= y; a02 *= z;
-      a10 *= x; a11 *= y; a12 *= z;
-      a20 *= x; a21 *= y; a22 *= z;
-      a30 *= x; a31 *= y; a32 *= z;
-    }
+    void         scale(T sx,
+                       T sy,
+                       T sz = static_cast<T>(1));
 
     template<typename S>
     void         scale(const Vec3<S>& sv) { scale(sv.x, sv.y, sv.z); }
@@ -631,13 +513,7 @@ namespace fdk {
     //! Translate the transformation by an x,y,z offset.
     void         translate(T x,
                            T y,
-                           T z = static_cast<T>(0))
-    {
-      a03 += x*a00 + y*a01 + z*a02;
-      a13 += x*a10 + y*a11 + z*a12;
-      a23 += x*a20 + y*a21 + z*a22;
-      a33 += x*a30 + y*a31 + z*a32;
-    }
+                           T z = static_cast<T>(0));
 
     template<typename S>
     void         translate(const Vec3<S>& v) { translate(v.x, v.y, v.z); }
@@ -1731,6 +1607,11 @@ namespace fdk {
   Mat4<T>::interpolate(const Mat4<T>& m0,
                        const Mat4<T>& m1,
                        S              t) { *this = fdk::lerpClamped(m0, m1, t); }
+
+
+
+  extern template class FDK_API Mat4<float>;
+  extern template class FDK_API Mat4<double>;
 
 }
 

@@ -65,15 +65,16 @@ namespace DD
       class DDImage_API MaterialContext
       {
       public:
-        usg::Token     shaderFamily;    //!< Family name for consuming shading system - 'slr', 'glslfx', 'mtlx', etc.
-        OutputContext  outputContext;   //!< Output time/view to set or override material at
+        usg::Token      target; //!< Identifier for consuming renderer system - 'slr', 'glslfx', etc.
+        fdk::FrameValue frame;  //!< Frame to sample/override at
+        fdk::TimeValue  time;   //!< Absolute time to sample/override at (built from frame and script fps)
+        int32_t         view;   //!< View to sample/override at (time is same for -all- views!)
 
-        fdk::TimeValue  outputTime() const { return outputContext.frame(); }
-        int32_t         outputView() const { return outputContext.view(); }
 
       public:
-        MaterialContext(const std::string&   shaderFamily,
-                        const OutputContext& outputContext);
+        MaterialContext(const std::string&     _target,
+                        const fdk::FrameValue& _frame,
+                        int32_t                _view);
       };
 
       //----------------------------------------------------------------------------
@@ -89,17 +90,19 @@ namespace DD
       //! Return the Op this interface is attached to. Should return 'this'.
       virtual Op*  getOp() { return nullptr; }
 
-      /*! Assign an optional override Op location used for shader property value updating
-          which may have a different time or view than the base Op the MaterialOpI is
-          bound to.
+      /*! Assign an optional override Op used for shader property value updating which may
+          have a different time or view than the base Op the MaterialOpI is bound to.
 
           Subclasses can return this override Op in getOp() so Knob sampling is performed
           on the override rather than the base Op.
       */
-      virtual void setShaderInstanceOverride(const OpGraphLocation& opLocation) {}
+      virtual void setOverrideOp(Op*) {}
 
-      //! Disable any assigned override Op location.
-      virtual void clearShaderInstanceOverride() {}
+      //! Disable any assigned override Op.
+      virtual void clearOverrideOp() {}
+
+      //! Return the override Op used for shader property value updating.
+      virtual Op*  getOverrideOp() const { return nullptr; }
 
 
       //----------------------------------------------------------------------------
@@ -109,15 +112,11 @@ namespace DD
       //! Returns a list of API's this output shader must implement.
       virtual usg::TokenArray getAppliedApiSchemas() const { return {}; }
 
-      //! Returns a list of material families supported by this
-      //! shader e.g. mtlx.
-      virtual usg::TokenArray getMaterialFamilies() const { return {}; }
-
       /*! Return a Schema name to use when building the output shader.
           Must implement.
       */
       virtual const char*  getOutputSchema() const
-#if (kDDImageVersionMajorNum > 17)
+#if (kDDImageVersionMajorNum > 16)
                                                    = 0;
 #else
                                                    { return ""; }
@@ -129,7 +128,7 @@ namespace DD
           Must implement.
       */
       virtual int32_t      getOutputType() const
-#if (kDDImageVersionMajorNum > 17)
+#if (kDDImageVersionMajorNum > 16)
                                                  = 0;
 #else
                                                  { return OUTPUT_TYPE_NONE; }
@@ -142,15 +141,6 @@ namespace DD
       bool  isVolumeShader()  const { return (getOutputType() == OUTPUT_TYPE_VOLUMESHADER); }
 
 
-      /*! Return whether this is a custom Nuke material.
-
-          Custom Nuke materials are converted to glslfx code, in order to be handled
-          by the HydraViewer. If this material is already supported, for example
-          MaterialX nodes in the renderer, this should return false.
-      */
-      virtual bool isCustomNukeMaterial() { return true; }
-
-
       /*! Get a unique name for the output shader node(s) this shader interface produces.
           If this material outputs multiple shader nodes then this name should be used as
           the base for them.
@@ -161,15 +151,15 @@ namespace DD
           will all live in a single 'pool' of shaders - ie there's no additional prim
           hierarchy structure underneath the MaterialPrim.)
 
-          The default name is the Op's node name with the schema name appended to the end.
-          Since Nuke Node names are quaranteed to be unique this is a reliable way to
-          identify the shader without resorting to something like UUIDs or hashing
+          The default name returned is the Op's node_name() with the schema name appended
+          on the end. Since Nuke Node names are quaranteed to be unique this is a reliable
+          way to identify the shader without resorting to something like UUIDs or hashing
           the Node pointer. For example the Nuke Node named 'Project3D5' will return the
           shader node name 'Project3D5_Project3DTexture' as 'Project3DTexture' is the output
           schema name for the Project3DShaderOp plugin.
 
-          If 'shaderFamily' is not empty it is prepended to the name with an underscore '_'
-          separator. So 'glslfx' shader family will produce 'glslfx_Project3D5_Project3DTexture'.
+          If 'target_renderer' is not empty it is prepended to the name with an underscore '_'
+          separator. So 'glslfx' target renderer will produce 'glslfx_Project3D5_Project3DTexture'.
 
           Nested shader graph groups are not supported and all shader node names are assumed
           to be within the *same* group namespace - ie all the node names must be unique.
@@ -178,7 +168,7 @@ namespace DD
           pathing characters like '/' or '.', and underscores '_' are recommended as a
           separator for compound names.
       */
-      virtual std::string  getShaderNodeName(const usg::Token& shaderFamily = usg::Token());
+      virtual std::string  getShaderNodeName(const usg::Token& target_renderer = usg::Token());
 
 
       /*! Return the preferred input type enum for the Node input number. This is really
@@ -218,9 +208,9 @@ namespace DD
 
           Calling object takes ownership of all created allocations.
       */
-      virtual usg::ShaderDesc*  createShaderGraph(int32_t                outputType,
+      virtual usg::ShaderDesc*  createShaderGraph(int32_t                output_type,
                                                   const MaterialContext& rtx,
-                                                  usg::ShaderDescGroup&  shaderGroup) { return nullptr; }
+                                                  usg::ShaderDescGroup&  shader_group) { return nullptr; }
 
       /*! Same as createShaderGraph() but automatically handles input Op as a MaterialOpI
           or a built-in interface shader.
@@ -232,9 +222,9 @@ namespace DD
           or added. This commonly happens when a texture source is shared between
           several shaders.
       */
-      virtual usg::ShaderDesc*  createShaderGraphFromOp(const OpGraphLocation& opLocation,
+      virtual usg::ShaderDesc*  createShaderGraphFromOp(Op*                    input_op,
                                                         const MaterialContext& rtx,
-                                                        usg::ShaderDescGroup&  shaderGroup);
+                                                        usg::ShaderDescGroup&  shader_group);
 
       //-------------------------------
 
@@ -253,16 +243,16 @@ namespace DD
 
           Default implementation does nothing.
       */
-      virtual void  updateShaderGraphOverrides(int32_t                outputType,
+      virtual void  updateShaderGraphOverrides(int32_t                output_type,
                                                const MaterialContext& rtx,
-                                               usg::ShaderDescGroup&  shaderGroup) {}
+                                               usg::ShaderDescGroup&  shader_group) {}
 
       /*! Same as updateShaderGraphOverrides() but automatically handles input Op as a
           MaterialOpI or a built-in interface shader.
       */
-      virtual void  updateShaderGraphFromOp(const OpGraphLocation& opLocation,
+      virtual void  updateShaderGraphFromOp(Op*                    input_op,
                                             const MaterialContext& rtx,
-                                            usg::ShaderDescGroup&  shaderGroup);
+                                            usg::ShaderDescGroup&  shader_group);
 
 
 
@@ -277,15 +267,15 @@ namespace DD
       /*! Convenience function builds a suffix depending on if the op's node has clones.
           Return empty string if the node has no clones or else '_inst<instance index>'.
       */
-      static std::string       getNodeInstanceSuffix(Node* node);
+      static std::string       getNodeInstanceSuffix(DD::Image::Op* op);
 
-      //! Convenience function builds a standard shader name with pattern '<name>_<suffix>'.
-      static std::string       buildName(const std::string& name,
-                                         const char*        suffix);
-      //! Convenience function builds a standard shader name with pattern '<shaderFamily>_<name>_<suffix>'.
-      static std::string       buildName(const usg::Token&  shaderFamily,
-                                         const std::string& name,
-                                         const char*        suffix);
+      //! Convenience function builds a standard shader name with '<node_name>_<schema_name>'.
+      static std::string       buildName(const std::string& node_name,
+                                         const char*        schema_name);
+      //! Convenience function builds a standard shader name with '<target_renderer>_<node_name>_<schema_name>'.
+      static std::string       buildName(const usg::Token&  target_renderer,
+                                         const std::string& node_name,
+                                         const char*        schema_name);
 
 
       /*! Return the type of the appropriate schema interface to use for the
@@ -304,11 +294,17 @@ namespace DD
       */
       static int32_t           getShaderTypeFromOp(Op* op);
 
-      //! Build the unique shader node name to use for the Op location using the location node
-      //! name and output schema name.
-      //! Prepends \a shaderFamily (if not empty) to final name with an underscore '_' separator.
-      static std::string       getShaderNodeNameFromOp(const usg::Token&      shaderFamily,
-                                                       const OpGraphLocation& opLocation);
+      /*! Build or return the unique shader node name to use for the input Op.
+
+          If the Op is a MaterialOpI then MaterialOpI::getShaderNodeName() is returned,
+          otherwise a name is built from the input Op's node name plus the schema type
+          that the Op creates.
+
+          If 'target_renderer' is not empty it is prepended to the name with an underscore '_'
+          separator.
+      */
+      static std::string       getShaderNodeNameFromOp(const usg::Token& target_renderer,
+                                                       Op*               op);
 
 
       /*! Returns the built-in shader Schema name for input 'op_type'.
@@ -338,8 +334,8 @@ namespace DD
           Hydra or SlrShaders need to evaluate values from the Op via the shader
           interface.
       */
-      static usg::ShaderDesc*  createOpInterfaceShaderDesc(int32_t                op_type,
-                                                           const OpGraphLocation& opLocation);
+      static usg::ShaderDesc*  createOpInterfaceShaderDesc(int32_t op_type,
+                                                           Op*     op);
 
 
       /*! Create an Op interface ShaderDesc from the provided Op, setting its
@@ -349,21 +345,7 @@ namespace DD
           using the Op* type and passed to the createOpInterfaceShaderDesc(op_type, op)
           method.
       */
-      static usg::ShaderDesc*  createOpInterfaceShaderDesc(const OpGraphLocation& opLocation);
-
-
-      /*! Convenience to retrieve a ShaderDesc from the named input of another ShaderDesc.
-          It does this by searching the ShaderConnections for the input and matching the
-          one connected to the named output port of the upstream shader. If the port name
-          is matched then the upstream shader name is retrieved from shaderGroup.
-
-          Note - if output port name is missing the leading 'outputs:' this prefix will be
-          added to the port name before matching.
-      */
-      static usg::ShaderDesc*  getInputShaderDesc(const usg::ShaderDesc* shaderDesc,
-                                                  const std::string&     inputName,
-                                                  const std::string&     upstreamOutputPortName,
-                                                  usg::ShaderDescGroup&  shaderGroup);
+      static usg::ShaderDesc*  createOpInterfaceShaderDesc(Op* op);
 
 
       //----------------------------------------------------------------------------
@@ -425,6 +407,7 @@ namespace DD
 
 
 
+    protected:
       //----------------------------------------------------------------------------
       //
       // Input property override functions
@@ -457,25 +440,7 @@ namespace DD
           These are virtual to allow subclasses to manage custom translation of property
           names, etc.
 
-          If \a ignoreDefaultTest is false we test if the knob is at its default value and only
-          writes the override if it is off default. USD, like Nuke, will use the default value of
-          the knob as fallback if an explicit value is not authored.
-
-          However, often the Nuke knob's default will not be the same as the USD shader property,
-          default and in those cases we always want to author the USD property so that we don't
-          allow USD to use the default fallback.
-
           Returns true if the override was applied successfully.
-      */
-      virtual bool  overrideShaderDescInput(const char*            knob_name,
-                                            bool                   ignoreDefaultTest,
-                                            const MaterialContext& rtx,
-                                            usg::ShaderDesc&       shader_desc,
-                                            const char*            target_property_name,
-                                            usg::Value::Type       target_property_type_hint = usg::Value::Type::InvalidType);
-
-      /*! Specialization which automatically uses the Knob's default value to determine whether to
-          author the override (ignoreDefaultTest = false).
       */
       virtual bool  overrideShaderDescInput(const char*            knob_name,
                                             const MaterialContext& rtx,

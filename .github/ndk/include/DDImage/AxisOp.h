@@ -1,20 +1,24 @@
+//------------------------------------------------------------------------------
+// DDImage/AxisOp.h
+//
 // Copyright (c) 2021 The Foundry Visionmongers Ltd.  All Rights Reserved.
+//------------------------------------------------------------------------------
 
 #ifndef DDIMAGE_AXISOP_H
 #define DDIMAGE_AXISOP_H
 
 #include "DDImage/Op.h"
+#include "DDImage/SceneLoaderOpI.h"
+#include "DDImage/ScenePrimExporterOpI.h"
 #include "DDImage/KnobMixIns.h"
-#include "DDImage/ConstrainOpI.h"
 
 #include "DDImage/Knob.h"
 #include "DDImage/ArrayKnobI.h"
-#include "DDImage/AxisVals.h"
-#if kDDImageVersionMajorNum <= 17
+#if kDDImageVersionMajorNum <= 16
 #  include "DDImage/LookAt.h"
 #  include "DDImage/Matrix4.h"
 #else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
 #endif
 
 #include "ndk/geo/camera/Camera.h"
@@ -34,7 +38,7 @@ namespace DD {
 
     //----------------------------------------------------------------------
 
-#if kDDImageVersionMajorNum <= 17
+#if kDDImageVersionMajorNum <= 16
     class DDImage_API Axis
     {
     public:
@@ -51,39 +55,37 @@ namespace DD {
       void print_info(const char* title);
     };
 #else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
 #endif
 
     //----------------------------------------------------------------------
 
 
-    //! Provides a world-space 3D point.
-    class WorldPointProvider : public ValueProvider
+    /*! Provides a world-space 3D point.
+    */
+    class WorldPointProvider : public ArrayKnobI::ValueProvider
     {
       AxisOp* _axisOp;
+
     public:
       WorldPointProvider(AxisOp* axisOp) : _axisOp(axisOp) {}
 
-      bool provideValuesEnabled(const Knob* knob, const OutputContext&) const override;
-      int  providerSourceType(const Knob* knob, const OutputContext&) const override;
-      bool isDefault(const Knob* knob, const OutputContext&) const override;
-      bool isAnimated(const Knob* knob, const OutputContext&) const override;
+      bool provideValuesEnabled(const ArrayKnobI* arrayKnob, const OutputContext&) const override;
 
       std::vector<double> provideValues(const ArrayKnobI* arrayKnob, const OutputContext&) const override;
     };
 
 
-    //! Provides values for the AxisOp \a 'world_matrix' knob.
-    class DDImage_API WorldMatrixProvider : public ValueProvider
+    /*! Provides values for the AxisOp \a 'world_matrix' knob.
+    */
+    class DDImage_API WorldMatrixProvider : public ArrayKnobI::ValueProvider
     {
       AxisOp* _axisOp;
+
     public:
       WorldMatrixProvider(AxisOp* axisOp) : _axisOp(axisOp) {}
 
-      bool provideValuesEnabled(const Knob* knob, const OutputContext&) const override;
-      int  providerSourceType(const Knob* knob, const OutputContext&) const override;
-      bool isDefault(const Knob* knob, const OutputContext&) const override;
-      bool isAnimated(const Knob* knob, const OutputContext&) const override;
+      bool provideValuesEnabled(const ArrayKnobI* arrayKnob, const OutputContext&) const override;
 
       std::vector<double> provideValues(const ArrayKnobI* arrayKnob, const OutputContext&) const override;
     };
@@ -94,31 +96,41 @@ namespace DD {
 
     /*! \class DD::Image::AxisOp
 
-        \brief AxisOp is the base class for all the 3D 'scene' objects like locators,
-        cameras and lights.
+        \brief AxisOp is the base class for all the 3D 'scene' objects like
+        locators (usg::XformPrim), cameras (usg::CameraPrim) and lights (usg::tbd).
 
-        AxisOp contains a world transform matrix sampled at the Op's OutputContext
-        and nothing more. This base class is intentionally kept simple and without
-        transform Knobs or input connections to allow AxisOp subclasses to be filled
-        in via other OutputContext sampling methods such as direct conversion from
-        USD prims. The CameraOp and LightOp base classes have been similarily
-        simplified for the same reason.
-
-        AxisSceneOp is the Op class that now contains all the transform Knobs and
-        parenting/lookat input connections to other SceneOp nodes like CameraSceneOps
-        and LightSceneOps. See those classes for more info.
+        It contains a local transform matrix and an optional local-parent transform
+        matrix. The local-parent enables an arbitrary parenting hierarchy to be
+        decomposed and contained within the AxisOp allowing the node to be disconnected
+        or disassociated from a parenting network or scenegraph. The node is
+        effectively localized and can be copied, pasted into other scripts, etc.
      */
     class DDImage_API AxisOp : public Op
-#if kDDImageVersionMajorNum <= 17
+                             , public SceneLoaderOpI
+                             , public ScenePrimExporterOpI
+#if kDDImageVersionMajorNum <= 16
                              , public LookAt
 #else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
 #endif
     {
     protected:
+      bool         _parentExtractEnable;    //!< Split the parent xform out from the local
+      bool         _syncLocalParent;        //!< Local-parent read lock
+      bool         _syncLocalAxis;          //!< Local-axis read lock
+      //
+      fdk::Vec3d   _localParentTranslate;   //!< Local-parent translation knob value
+      fdk::Vec3d   _localParentRotate;      //!< Local-parent rotate knob value
+      fdk::Vec3d   _localParentScale;       //!< Local-parent scale knob value
+      fdk::Mat4d   _localParentMatrix;      //!< Parent transform derived from local parent TRS knobs
+      //
+      fdk::Mat4d   _localAxisMatrix;        //!< Local matrix that Axis_Knob fills in (no lookat rotations)
+      //
       ndk::XformParameters _xformParams;    //!< Axis xform params
 
-#if kDDImageVersionMajorNum <= 17
+      DD::Image::Hash _parentHash;          //!< Does parent path or transform need to be updated?
+
+#if kDDImageVersionMajorNum <= 16
       //----------------------------------------------------------------------------
       // Deprecation unions to retain backward-compatibility in Nuke 14
       // The old var names will disappear in a Nuke major rev after 16
@@ -128,30 +140,32 @@ namespace DD {
         mFnDeprecatedLegacy3DSystemInNuke14("inversion_updated has been deprecated, use _xformInversionValid instead.")
         bool inversion_updated;    //!< Use _xformInversionValid instead
       };
-      mFnDeprecatedLegacy3DSystemInNuke14("axis_knob has been deprecated")
-      Axis_KnobI* axis_knob;
-
-      int   display3d_;     //!< GUI display setting      - deprecate or translate to new system?
       union {
-        bool  selectable_;  //!< GUI selectable checkmark - deprecate or translate to new system?
-        bool  _selectable;
+        Axis_KnobI* _axisKnob;                    //!< Reference to the node Axis_Knob
+        mFnDeprecatedLegacy3DSystemInNuke14("axis_knob has been deprecated, use _axisKnob instead.")
+        Axis_KnobI* axis_knob;     //!< Use _axisKnob instead
       };
-      bool  _editable;      //!< Can the user change the knobs? (i.e. knobs not disabled)
-
-      WorldMatrixProvider* _worldMatrixProvider;  //!< 'world_matrix' output knob
 #else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
       bool         _xformInversionValid;          //!< Is _xformParams.w2l valid?
+      Axis_KnobI*  _axisKnob;                     //!< Reference to the node Axis_Knob
 #endif
+      WorldMatrixProvider* _worldMatrixProvider;  //!< 'world_matrix' output knob
+      //
+      Knob*  _localParentTranslateKnob;   //!< If not null apply parent_translate
+      Knob*  _localParentRotateKnob;      //!< If not null apply parent_rotate
+      Knob*  _localParentScaleKnob;       //!< If not null apply parent_scale
+
+      int   display3d_;                   //!< GUI display setting      - deprecate or translate to new system?
+      bool  selectable_;                  //!< GUI selectable checkmark - deprecate or translate to new system?
+      //
+      bool  _editable;                    //!< Can the user change the knobs? (i.e. knobs not disabled)
+
+      SnapKnobs _snapKnobs;
 
     public:
-      AxisOp(Node* node
-#if kDDImageVersionMajorNum <= 17
-             , int   defaultLookAtAxis = LookAt::kAxisZPlus
-#else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
-#endif
-            );
+      AxisOp(Node* node,
+             int   defaultLookAtAxis = LookAt::kAxisZPlus);
 
       virtual ~AxisOp();
 
@@ -159,59 +173,26 @@ namespace DD {
       const AxisOp* axisOp() const override { return this; }
             AxisOp* axisOp()       override { return this; }
 
-      //! Retrieve a version of this AxisOp at a specific OutputContext.
-      AxisOp* getAxisOpAt(const OutputContext& context) { return BuildOpAt(this, context)->axisOp(); }
+      //! Convenience that casts parent input 0 to an AxisOp.
+      AxisOp* parentInputOp() const { return op_cast<AxisOp*>(Op::input(0)); }
+
+      //! Return the node input to use for the parent axis source. Always defaults to input 0.
+      int32_t          parentInput() const { return 0; }
 
       bool can_link() const override { return false; }
 
-      //! Draw node as a circular shape.
+      //! Draw a circular node shape.
       const char*  node_shape() const override;
       unsigned     node_color() const override;
 
-      //----------------------------------------------
-
-#if kDDImageVersionMajorNum <= 17
-      //! Convenience that casts parent input 0 to an AxisOp.
-#else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
-      //! Return the parentInput() input cast to an AxisOp, if possible. This can be further
-      //! cast to a SceneOp (or directly to an AxisSceneOp/CameraSceneOp/LightSceneOp)
-      //! using 'op_cast()' like so:
-      //! 'SceneOpI* sceneOp = op_cast<SceneOpI*>(axisOp->parentInputOp())'.
-      //! See AxisSceneOp for the subclass version that supports input connections.
-#endif
-      virtual AxisOp* parentInputOp() const;
-
-#if kDDImageVersionMajorNum <= 17
-      //! Return the node input to use for the parent axis source, or -1 if no parent input.
-      //! Default returns input 0.
-#else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
-      //! Return the node input to use for the parent axis source, or -1 if no parent input.
-      //! Default returns -1, no parent input. See AxisSceneOp for the subclass version that
-      //! supports input connections.
-#endif
-      virtual int32_t parentInput() const;
-
-      //! Return the constrainInput() input cast to an AxisOp, if possible.
-      virtual AxisOp* constrainInputOp() const;
-
-      //! Return the node input to use for the constrain source, or -1 if no constrain input.
-      //! Default returns -1, no constraint input. See AxisSceneOp for the subclass version
-      //! that supports input connections.
-      virtual int32_t constrainInput() const;
-
-      //----------------------------------------------
-
-#if kDDImageVersionMajorNum <= 17
       //! Default is 2: axis and scene(optional)
       int          minimum_inputs() const override;
-      //! Default is 3: axis, constraint and scene
+      //! Default is 2: axis and scene(optional)
       int          maximum_inputs() const override;
-      //! Optional input index
+      //! Optional input index is the scene-importer input. This returns (maximum_inputs()-1).
       int          optional_input() const override;
 
-      //! AxisOp and null works on 0, GeomOp or null on input 1 and  AxisOp or null on input 2
+      //! AxisOp and null works on 0, and GeomOp or null on input 1.
       bool         test_input(int node_input, Op* op) const override;
 
       //! Returns null for all inputs. Override this so Op::test_input() doesn't produce warnings.
@@ -220,6 +201,8 @@ namespace DD {
       //!
       const char*  input_label(int node_input, char*) const override;
 
+
+#if kDDImageVersionMajorNum <= 16
       /*! *** Nuke14 only *** virtual method is used to indicate that the AxisOp
           subclass is a legacy one or not.
 
@@ -229,234 +212,281 @@ namespace DD {
           AxisOp get the same behavior.
 
           Existing AxisOp subclass plugins like 'Axis2', 'Axis3', 'Camera2', 'Camera3',
-          'Light2', 'Light3', etc will retain their current behaviors through Nuke17,
-          but those plugins will be removed in Nuke18, and existing scripts using them
+          'Light2', 'Light3', etc will retain their current behaviors through Nuke14,
+          but those plugins will be removed in Nuke15, and existing scripts using them
           will no longer work.
       */
-      mFnDeprecatedLegacy3DSystemInNuke14("isLegacyAxisOp() has been deprecated, port AxisOp sublass to AxisSceneOp.")
+      mFnDeprecatedLegacy3DSystemInNuke14("isLegacyAxisOp() has been deprecated, port AxisOp sublass to new Nuke 14 api.")
       bool isLegacyAxisOp() const;
+#else
+#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
+#endif
+
+
+      //----------------------------------------------------------------------------
+      // SceneLoaderOpI scene prim importer handling
+      //----------------------------------------------------------------------------
+
+      //! SceneLoaderOpI: Return the Op the interface is attached to.
+      Op*      getSceneLoaderOp() override { return this; }
+
+      //! SceneLoaderOpI: If loader is attached to an AxisOp subclass return 'this'.
+      AxisOp*  asAxisLoaderOp() override { return this; }
+
+      //! SceneLoaderOpI: Return the node input to use for the scene importer. Default returns optional_input().
+      int32_t  sceneLoaderSourceInput() const override { return optional_input(); }
+
+      //! Convenience that casts input sceneImporterInput() to a GeomOp.
+      GeomOp*  sceneInputOp() const { return op_cast<GeomOp*>(Op::input(sceneLoaderSourceInput())); }
+
+      /*! SceneLoaderOpI: Try to import prim data from the provided stage.
+          Will return 1(error) if stage is invalid. If \a prim_path is empty then -1
+          will be returned indicating no change has occured, otherwise if \a prim_path
+          is invalid or not present in stage then 1(error) will be returned.
+
+          Return codes:
+          -1 - no prim data was loaded and no error, usually due to empty prim path
+           0 - prim data was loaded with no error
+           1 - there was an error and no prim data was loaded
+      */
+      int32_t  importScenePrim(const usg::StageRef& stage,
+                               const std::string&   primPath) override;
+
+
+      //----------------------------------------------------------------------------
+      // GeometryProviderI handling
+      //----------------------------------------------------------------------------
+
+      //! GeometryProviderI:  Return the Op the interface is attached to.
+      Op*  getGeometryProviderOp() override { return this; }
+
+      //! GeometryProviderI: Allow subclasses to gain access to sibling functions.
+      GeometryProviderI*  asGeometryProvider() override { return this; }
+
+      //! Cast to a GeometryProviderI interface. This is much cheaper and safer than using dynamic_cast.
+            GeometryProviderI* geometryProvider()       override { return asGeometryProvider(); }
+      const GeometryProviderI* geometryProvider() const override { return const_cast<AxisOp*>(this)->asGeometryProvider(); }
+
+
+      //----------------------------------------------------------------------------
+      // ScenePrimExporterOpI scene prim output handling
+      //----------------------------------------------------------------------------
+
+      //! ScenePrimExporterOpI:  Return the Op the interface is attached to.
+      Op*  getScenePrimExporterOp() override { return this; }
+
+      //! ScenePrimExporterOpI: Allow subclasses to gain access to sibling functions.
+      ScenePrimExporterOpI*  asScenePrimExporter() override { return this; }
+
+      //! Cast to a ScenePrimExporterOpI interface. This is much cheaper and safer than using dynamic_cast.
+            ScenePrimExporterOpI* scenePrimExporterOpI()       override { return asScenePrimExporter(); }
+      const ScenePrimExporterOpI* scenePrimExporterOpI() const override { return const_cast<AxisOp*>(this)->asScenePrimExporter(); }
+
+      //! ScenePrimExporterOpI: Prepends the parent connection if there is one.
+      usg::Path  exportBasePrimPath() const override;
+
+      // ScenePrimExporterOpI: Returns 'Xform' for AxisOp base class.
+      int32_t  exportBasePrimType() const override;
+
+
+      //----------------------------------------------------------------------------
+      // Knobs
+      //----------------------------------------------------------------------------
 
       //!
       void  knobs(Knob_Callback f) override;
 
+      //! Create the Axis Op Knobs and set a custom prim filter to use on the import popup.
+      void createAxisOpKnobs(Knob_Callback      f,
+                             bool               openImportGroup,
+                             bool               openExportGroup,
+                             const std::string& primFilters = "");
+
       //!
       int   knob_changed(Knob* k) override;
-#else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
-#endif
 
-#if kDDImageVersionMajorNum <= 17
-      //! Validate the parent axis first, if any, then concatenate the local transform
-      //! with that. If the resulting matrix has changed, update the inversion flag.
-#else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
-      //! Build the concatenated world transform matrix from the XformParameters and
-      //! if changed update the inversion flag.
-#endif
-      void _validate(bool for_real) override;
+      //! Adds the OpenGL display option controls.
+      virtual void  addDisplayOptionsKnobs(Knob_Callback f);
 
+      /*! Add the local-parent TRS knobs. If \a addSyncOptions is true the
+          import-sync options are added.
+      */
+      virtual void  addLocalParentingKnobs(Knob_Callback f,
+                                           bool          addSyncOptions = true);
+
+      /*! Adds the front panel local-axis transform knobs. If \a addSyncOptions is
+          true the import-sync options are added.
+      */
+      virtual void  addLocalXformKnobs(Knob_Callback f,
+                                       bool          addSyncOptions = true);
+
+      /*! Adds the front panel local-parent & local-axis transform knobs. If
+          \a addSyncOptions is true the import-sync options are added.
+          Calls addLocalParentingKnobs() then addLocalXformKnobs(), adding dividers.
+      */
+      virtual void  addTransformKnobs(Knob_Callback f,
+                                      bool          addSyncOptions = true);
+
+      //! Adds the scene importer option knobs. A subclass can override this to
+      //! include additional knobs within the import knob group.
+      //! Default implementation calls addSceneLoaderKnobs(primFilters).
+      virtual void addImportOptionsKnobs(Knob_Callback f, const std::string& primFilters = "");
+
+      //! Adds the prim export option knobs.
+      void addExportOptionsKnobs(Knob_Callback f) override;
+
+      //! Adds addl front-panel knobs. Called after addTransformKnobs(). Base class adds nothing.
+      virtual void  addExtraFrontPanelKnobs(Knob_Callback f);
+
+      //-----------------------------
+
+      //! Return internal 'transform' Axis_Knob for set/get internal transformation.
+      Axis_KnobI*   getAxis();
+
+      /*! Enable or disable axis knobs.
+          \param on true to enable the axis knobs ('transform')
+      */
+      void  enableAxisKnobs(bool on);
+
+      /*! Enable or disable knobs based on array of knobnames.
+          \param knobNames knob names to enable or disable
+          \param on true to enable the knobs
+      */
+      void  enableKnobs(const std::vector<std::string>& knobNames, bool on);
+
+      //! SceneLoaderOpI: Enable/disable knobs filled in by the scene importer.
+      void  enableSceneLoaderKnobs(bool importEnabled) override;
+      void  enableSceneLoaderExtraKnobs(bool importEnabled) override;
+      //! SceneLoaderOpI: Enable/disable knobs filled in by the xform decomposer.
+      void  enableXformExtractKnobs(bool xformExtractEnabled) override;
+
+      //! ScenePrimExporterOpI: Enable/disable knobs filled in by the scene prim exporter.
+      void  enableExportOptionsKnobs(bool exportEnabled) override;
 
       //----------------------------------------------------------------------------
       // Transforms
       //----------------------------------------------------------------------------
 
-      //! Does the local parent transform animate? This is only an indicator that the
-      //! transform -MAY- vary in time, not that its value actually does.
-      //! A subclass can determine this from any of its knobs animation state and any
-      //! input Ops which may affect the local parent transform.
-      //! Default implementation returns false.
-      virtual bool  localParentTransformVaries() const { return false; }
+      /*! Validate the parent axis first, if any, then concatenate the local transform
+          with that.  If the resulting matrix has changed, update the inversion flag.
+      */
+      void _validate(bool for_real) override;
 
-      //! Does the local transform animate? This is only an indicator that the transform
-      //! -MAY- vary in time, not that its value actually does.
-      //! A subclass can determine this from any of its knobs animation state and any
-      //! input Ops which may affect the local transform.
-      //! Default implementation returns false.
-      virtual bool  localTransformVaries() const { return false; }
+      // Input-parent transform if connected to a valid parent input source.
+      const fdk::Mat4d&   inputParentTransform() const;
 
-      //------------------------------------
+      //! Result of the local-parent TRS knobs, if enabled. Calculated in _validate().
+      const fdk::Mat4d&   localParentTransform() const { return _localParentMatrix; }
 
-      //! Transform components.
-      //! Default implementation returns an empty XformComponents struct.
-      virtual const ndk::XformComponents&  transformComponents() const;
+      //! Result of the local-axis TRS Axis_Knob (*without* lookat rotations.) Calculated in knobs().
+      const fdk::Mat4d&   localAxisTransform() const { return _localAxisMatrix; }
 
-      //! Calculate the transform components of \a axisOp at a specific OutputContext.
-      static ndk::XformComponents  GetTransformComponentsAt(const AxisOp* axisOp, const OutputContext& context);
+      //! Parent transform containing the input-parent and local-parent. Calculated in _validate().
+      const fdk::Mat4d&   parentTransform() const { return _xformParams.parent; }
 
-      //------------------------------------
+      //! Local object transform containing the local-axis TRS Axis_Knob *with* lookat rotations. Calculated in _validate().
+      const fdk::Mat4d&   localTransform() const { return _xformParams.local; }
 
-      //! Input parent transform, if any, otherwise the identity.
-      //! Default implementation returns an identity matrix.
-      virtual const fdk::Mat4d&  inputParentTransform() const;
+      //! World transform containing the input-parent, local-parent, local-axis, and lookat. Calculated in _validate().
+      const fdk::Mat4d&   worldTransform() const { return _xformParams.l2w; }
 
-      //! Set the input parent transform matrix. Note that depending on the subclass
-      //! implementation this may only persists until the next knobs()/validate() pass.
-      //! Default implementation does nothing.
-      virtual void  setInputParentTransform(const fdk::Mat4d&);
+      /*! Return the inverse world transform. If \a worldTransform has been marked invalid
+          the inverse world transform will be calculated and updated now.
+       */
+      const fdk::Mat4d&   invWorldTransform();
 
-      //! Calculate the input parent transform of \a axisOp at a specific OutputContext.
-      static fdk::Mat4d  GetInputParentTransformAt(const AxisOp* axisOp, const OutputContext& context);
+      /*! Calculate the world-space transform of this node at a specific OutputContext.
+          Calls Knob::store() on all the transform knobs but discards the results, so this
+          method can be more expensive than creating an AxisOp at the OutputContext and
+          reusing it.
+      */
+      virtual fdk::Mat4d  worldTransformAt(const OutputContext& context) const;
 
-      //------------------------------------
-
-      //! Local parent axis transform, if any, otherwise the identity.
-      //! Default implementation returns an identity matrix.
-      virtual const fdk::Mat4d&  localParentAxisTransform() const;
-
-      //! Set the local parent axis transform matrix. Note that depending on the subclass
-      //! implementation this may only persists until the next knobs()/validate() pass.
-      //! Default implementation does nothing.
-      virtual void  setLocalParentAxisTransform(const fdk::Mat4d&);
-
-      //! Calculate the local parent axis transform of \a axisOp at a specific OutputContext.
-      static fdk::Mat4d  GetLocalParentAxisTransformAt(const AxisOp* axisOp, const OutputContext& context);
-
-      //------------------------------------
-
-      //! Local 'axis' transform, if any, otherwise the identity. Typically this is the
-      //! TRS Axis_Knob results separate from additional constraints or stereo offsets.
-      //! Default implementation returns an identity matrix.
-      virtual const fdk::Mat4d&  localAxisTransform() const;
-
-      //! Set the local axis transform matrix. Note that depending on the subclass
-      //! implementation this may only persists until the next knobs()/validate() pass.
-      //! Default implementation does nothing.
-      virtual void  setLocalAxisTransform(const fdk::Mat4d&);
-
-      //! Calculate the local axis transform of \a axisOp at a specific OutputContext.
-      static fdk::Mat4d  GetLocalAxisTransformAt(const AxisOp* axisOp, const OutputContext& context);
-
-      //------------------------------------
-
-      //! Parent transform, if any, otherwise the identity. Should include
-      //! localParentAxisTransform() and any constraint transform applied.
-      const fdk::Mat4d&  parentTransform() const { return _xformParams.parent; }
-
-      //! Set the parent transform matrix. Note that depending on the subclass
-      //! implementation this may only persists until the next knobs()/validate() pass.
-      void  setParentTransform(const fdk::Mat4d&);
-
-      //------------------------------------
-
-      //! Local object transform, if any, otherwise the identity. Should include
-      //! localAxisTransform() and any constraint, stereo or any other local
-      //! transform applied.
-      const fdk::Mat4d&  localTransform() const { return _xformParams.local; }
-
-      //! Set the local transform matrix. Note that depending on the subclass
-      //! implementation this may only persists until the next knobs()/validate() pass.
-      void  setLocalTransform(const fdk::Mat4d&);
-
-      //------------------------------------
-
-      //! World transform containing the concatenated parent and local transforms.
-      //! Calculated in _validate() and overridable via setWorldTransform().
-      const fdk::Mat4d&  worldTransform() const { return _xformParams.l2w; }
-
-      //! Return the inverse world transform. If \a worldTransform has been marked invalid
-      //! the inverse world transform will be calculated and updated now.
-      const fdk::Mat4d&  invWorldTransform();
-
-      //! Replace the output matrix derived in _validate(), also invalidating the inverse
-      //! world transform. Note this only persists until the next validate() pass
-      //! overwrites the derived matrices.
-      void  setWorldTransform(const fdk::Mat4d&);
-
-      //! Calculate the world transform of \a axisOp at a specific OutputContext.
-      static fdk::Mat4d  GetWorldTransformAt(const AxisOp* axisOp, const OutputContext& context);
+      /*! Replace the output matrix derived in _validate(), also invalidating the inverse
+          world transform. Note this only persists until the next validate() pass
+          overwrites the derived matrices.
+      */
+      void                setWorldTransform(const fdk::Mat4d&);
 
       //----------------------------------------------------------------------------
 
       int display3d() const { return display3d_; }
       int display3d()       { return display3d_; }
-
       // only constructors should call this, unless knobs() is not called:
       void setDisplay3d(int mode) { display3d_ = mode; }
-
-
-    protected:
-      //----------------------------------------
-
-      //! Calculate the transform components of this node at a specific OutputContext.
-      //! Subclass implementation of GetTransformComponentsAt(AxisOp).
-      //! Base class does nothing and returns an empty XformComponents struct.
-      virtual ndk::XformComponents _getTransformComponentsAt(const OutputContext& context) const;
-
-      //----------------------------------------
-
-      //! Calculate the input parent transform of this node at a specific OutputContext.
-      //! Subclass implementation of GetInputParentTransformAt(AxisOp).
-      //! Base class does nothing and returns \a inputParentTransform().
-      virtual fdk::Mat4d _getInputParentTransformAt(const OutputContext& context) const;
-
-      //! Calculate the local parent transform of this node at a specific OutputContext.
-      //! Subclass implementation of GetLocalParentAxisTransformAt(AxisOp).
-      //! Base class does nothing and returns \a localParentAxisTransform().
-      virtual fdk::Mat4d _getLocalParentAxisTransformAt(const OutputContext& context) const;
-
-      //! Calculate the local axis transform of this node at a specific OutputContext.
-      //! Subclass implementation of GetLocalAxisTransformAt(AxisOp).
-      //! Base class does nothing and returns \a localAxisTransform().
-      virtual fdk::Mat4d _getLocalAxisTransformAt(const OutputContext& context) const;
-
-      //----------------------------------------
-
-      //! Calculate the world transform of this node at a specific OutputContext.
-      //! Subclass implementation of GetWorldTransformAt(AxisOp).
-      //! Base class does nothing and returns \a worldTransform().
-      virtual fdk::Mat4d _getWorldTransformAt(const OutputContext& context) const;
-
-
-#if kDDImageVersionMajorNum <= 17
-    public:
-      /*! *** Nuke14-17 only *** virtual method is used to indicate that the AxisOp
-          subclass is a legacy one or not.
-      */
-      mFnDeprecatedLegacy3DSystemInNuke14("isLegacyAxisOp() has been deprecated, port AxisOp sublass to AxisSceneOp.")
-      virtual bool _isLegacyAxisOp() const { return true; }
-
-      mFnDeprecatedLegacy3DSystemInNuke14("worldTransformAt() deprecated on AxisOp, use the static AxisOp::GetWorldTransformAt(AxisOp) "
-                                          "method instead. If implementing an override of this method implement _getWorldTransformAt().")
-      virtual fdk::Mat4d worldTransformAt(const OutputContext& context) const;
-
-      mFnDeprecatedLegacy3DSystemInNuke14("getAxis() deprecated on AxisOp, now implemented on AxisSceneOp::getLocalAxisKnob().")
-      Axis_KnobI* getAxis();
-
-      mFnDeprecatedLegacy3DSystemInNuke14("enableAxisKnobs() deprecated on AxisOp, now implemented on AxisSceneOp.")
-      void enableAxisKnobs(bool on);
-
-      mFnDeprecatedLegacy3DSystemInNuke14("enableKnobs() deprecated on AxisOp, now implemented on AxisSceneOp.")
-      void enableKnobs(const std::vector<std::string>& knobNames, bool on);
-
-      mFnDeprecatedLegacy3DSystemInNuke14("doAnyHandle() deprecated on AxisOp, implement on AxisSceneOp instead.")
-      HandlesMode doAnyHandles(ViewerContext*) override;
-
-      mFnDeprecatedLegacy3DSystemInNuke14("draw_handle() deprecated on AxisOp, implement on AxisSceneOp instead.")
-      void build_handles(ViewerContext*) override;
-
-      mFnDeprecatedLegacy3DSystemInNuke14("draw_handle() deprecated on AxisOp, implement on AxisSceneOp instead.")
-      void draw_handle(ViewerContext*) override;
 
       bool selectable() const { return selectable_; }
       void setSelectable(bool v) { selectable_ = v; }
 
-      mFnDeprecatedLegacy3DSystemInNuke14("editable() deprecated on AxisOp, implement on AxisSceneOp instead.")
       bool editable() const { return _editable; }
-      mFnDeprecatedLegacy3DSystemInNuke14("setEditable() deprecated on AxisOp, implement on AxisSceneOp instead.")
       void setEditable(bool v) { _editable = v; }
 
-      mFnDeprecatedLegacy3DSystemInNuke14("isGuiInteractive() deprecated on AxisOp, implement on AxisSceneOp instead.")
+      //! Return true if a particular knob transformation is modifiable by user interaction in gui.
       virtual bool isGuiInteractive(Axis_KnobI::Transformation knob) const;
 
+      //----------------------------------------------------------------------------
+
+      //!
+      HandlesMode  doAnyHandles(ViewerContext*) override;
+
+      /*! This default version will always cause draw_handle() to be called
+          when in 3D mode. Subclasses (i.e. the camera) should replace draw_handle
+          with their own version to draw what they want.
+      */
+      void         build_handles(ViewerContext*) override;
+
+      /*! Draws any geometry attached to this axis.
+          Note that the Axis knob will draw the 3-arrow axis control at its
+          pivot-translate location.
+      */
+      void         draw_handle(ViewerContext*) override;
+
+
+    protected:
+      //! SceneLoaderOpI: Change the import hash with local vars.
+      void _updateScenePrim(fdk::Hash& importHash) override;
+
+      //! Called by Nuke just BEFORE Op::knobs(EARLY_STORE).
+      //! This is used to update the scene importer and exporter states.
+      void _knobStorePrep(const OutputContext& opStoreContext) override;
+
+      //! Called by Nuke immediately AFTER Op::knobs().
+      //! This is used to update the scene importer and exporter states.
+      void _knobStorePost(const OutputContext& opStoreContext, Hash& opHash) override;
+
+      //! ScenePrimExporterOpI: If parent is connected include its hashes in the export state.
+      fdk::Hash _buildScenePrimExporterState(const fdk::Hash& hash) override;
+
+      //! ScenePrimExporterOpI: Subclass portion of exportScenePrims().
+      void _exportScenePrims(usg::LayerRef&            exportLayer,
+                             int32_t                   exportMode,
+                             const fdk::FrameValueSet& sampleFrames = fdk::FrameValueSet()) const override;
+
+      //! Export the transform data to an Xformable prim for all the specified times, or
+      //! all keys, depending on the \a exportMode.
+      //! A subclass can override this to do additional specialization.
+      //!
+      //! Base class implementation writes separate 'local_parent' and 'local_axis'
+      //! matrix XformOps.
+      virtual void _exportTransformOps(usg::XformablePrim&       xformable,
+                                       int32_t                   exportMode,
+                                       const fdk::FrameValueSet& sampleFrames = fdk::FrameValueSet()) const;
+
+#if kDDImageVersionMajorNum <= 16
+      /*! *** Nuke14 only *** virtual method is used to indicate that the AxisOp
+          subclass is a legacy one or not.
+      */
+      mFnDeprecatedLegacy3DSystemInNuke14("isLegacyAxisOp() has been deprecated, port AxisOp sublass to new Nuke 14 api.")
+      virtual bool _isLegacyAxisOp() const { return true; }
 
     protected:
       //----------------------------------------------------------------------------
       // Deprecated single-precision matrices - these are derived from the
       // new double-precision matrices. Will disappear in a Nuke major rev after 16
       //----------------------------------------------------------------------------
-      mFnDeprecatedLegacy3DSystemInNuke14("localtransform_ has been deprecated, use Mat4d AxisSceneOp::_localAxisMatrix instead.")
+      mFnDeprecatedLegacy3DSystemInNuke14("localtransform_ has been deprecated, use Mat4d _localTransform instead.")
         Matrix4 localtransform_;    //!< Local 'axis' matrix that Axis_Knob fills in - deprecated
-      mFnDeprecatedLegacy3DSystemInNuke14("local_ has been deprecated, use Mat4d _xformParams.local instead.")
+      mFnDeprecatedLegacy3DSystemInNuke14("local_ has been deprecated, use Mat4d _localAxisMatrix instead.")
         Matrix4 local_;             //!< Local matrix after look at performed - deprecated
       mFnDeprecatedLegacy3DSystemInNuke14("matrix_ has been deprecated, use Mat4d _xformParams.l2w instead.")
         Matrix4 matrix_;            //!< Object matrix - local&parent - deprecated
@@ -465,14 +495,14 @@ namespace DD {
 
     public:
       //----------------------------------------------------------------------------
-      // Deprecated functions - will disappear in a Nuke major rev after 17
+      // Deprecated functions - will disappear in a Nuke major rev after 16
       //----------------------------------------------------------------------------
       mFnDeprecatedLegacy3DSystemInNuke14("Class() has been deprecated, implement on subclass plugin instead.")
         const char*  Class() const override { return "Axis"; }
       mFnDeprecatedLegacy3DSystemInNuke14("node_help() has been deprecated, implement on subclass plugin instead.")
         const char*  node_help() const override { return ""; }
       //-----------------------------
-      mFnDeprecatedLegacy3DSystemInNuke14("selectable(bool mode) has been deprecated, use AxisSceneOp::setSelectable() instead.")
+      mFnDeprecatedLegacy3DSystemInNuke14("selectable(bool mode) has been deprecated, use setSelectable() instead.")
         void  selectable(bool v) { setSelectable(v); }
       mFnDeprecatedLegacy3DSystemInNuke14("display3d(int mode) has been deprecated, use setDisplay3d() instead.")
         void  display3d(int mode) { setDisplay3d(mode); }
@@ -499,13 +529,12 @@ namespace DD {
       //----------------------------------------------------------------------------
       //----------------------------------------------------------------------------
 #else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
 #endif
 
       //! Not implemented in the library but you can define it
       friend std::ostream& operator<<(std::ostream&, const AxisOp&);
     };
-
 
   }
 }

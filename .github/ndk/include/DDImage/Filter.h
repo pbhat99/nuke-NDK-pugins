@@ -37,7 +37,7 @@ namespace DD
     {
     public:
       // Built-in filter types:
-      enum { Impulse = 0, Linear, Cubic, Keys, Simon, Rifman, Mitchell, Parzen, Notch, Lanczos4, Lanczos6, Sinc4, NumFilters };
+      enum { Impulse = 0, Cubic, Keys, Simon, Rifman, Mitchell, Parzen, Notch, Lanczos4, Lanczos6, Sinc4, NumFilters };
       static const char* NAMES[]; //!< Name text array for menus
       static const char* HELP; //!< Help text for tooltips
 

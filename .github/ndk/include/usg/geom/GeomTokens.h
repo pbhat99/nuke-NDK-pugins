@@ -43,7 +43,6 @@ namespace usg {
     Token::Lazy cross{"cross"};
     Token::Lazy cubic{"cubic"};
     Token::Lazy curveVertexCounts{"curveVertexCounts"};
-    Token::Lazy curveIndices{"curveIndices"};
     Token::Lazy default_{"default"};
     Token::Lazy doubleSided{"doubleSided"};
     Token::Lazy edgeAndCorner{"edgeAndCorner"};
@@ -100,7 +99,6 @@ namespace usg {
     Token::Lazy orientations{"orientations"};
     Token::Lazy origin{"origin"};
     Token::Lazy orthographic{"orthographic"};
-    Token::Lazy overlay{"overlay"};
     Token::Lazy periodic{"periodic"};
     Token::Lazy perspective{"perspective"};
     Token::Lazy pinned{"pinned"};
@@ -138,8 +136,6 @@ namespace usg {
     Token::Lazy smooth{"smooth"};
     Token::Lazy stereoRole{"stereoRole"};
     Token::Lazy subdivisionScheme{"subdivisionScheme"};
-    Token::Lazy subdivisionTags{"subdivisionTags"};
-    Token::Lazy topology{"topology"};
     Token::Lazy tangents{"tangents"};
     Token::Lazy triangleSubdivisionRule{"triangleSubdivisionRule"};
     Token::Lazy trimCurveCounts{"trimCurve:counts"};
@@ -195,11 +191,6 @@ namespace usg {
       Token::Lazy Xform{"Xform"};
       Token::Lazy XformCommonAPI{"XformCommonAPI"};
       Token::Lazy Xformable{"Xformable"};
-      Token::Lazy RenderPass{"RenderPass"};
-      Token::Lazy RenderProduct{"RenderProduct"};
-      Token::Lazy RenderSettings{"RenderSettings"};
-      Token::Lazy RenderSettingsBase{"RenderSettingsBase"};
-      Token::Lazy RenderVar{"RenderVar"};
     } types;
     // --(BEGIN CUSTOM CODE)--
     Token::Lazy colorAov{"color"};
@@ -224,15 +215,14 @@ namespace usg {
 
     Token::Lazy universalRenderContext{""};
     Token::Lazy targetRenderers{"targetRenderers"};
+    Token::Lazy glslfxRenderContext{"glslfx"};
+    Token::Lazy mtlxRenderContext{"mtlx"};
     Token::Lazy slrRenderContext{"slr"};
 
     Token::Lazy universalSourceType{""};
     Token::Lazy glslfxSourceType{"glslfx"};
     Token::Lazy customGlslfxSourceType{"customGlslfx"};
     Token::Lazy slrSourceType{"slr"};
-
-    // Material families
-    Token::Lazy mtlxMaterialFamily{"mtlx"};
 
     // Property connectivity
     Token::Lazy connectability{"connectability"};
@@ -257,14 +247,7 @@ namespace usg {
 
     struct {
       Token::Lazy binding{"material:binding"};
-      Token::Lazy bindingPreview{"material:binding:preview"};
-      Token::Lazy bindingFull{"material:binding:full"};
     } material;
-
-    struct {
-      Token::Lazy weakerThanDescendants{"weakerThanDescendants"};
-      Token::Lazy strongerThanDescendants{"strongerThanDescendants"};
-    } bindingStrength;
 
     // USG-specific tokens
     struct {
@@ -274,65 +257,7 @@ namespace usg {
       Token::Lazy localProp{"usg:localProp"};
       Token::Lazy created{"usg:created"};
       Token::Lazy parent{"usg:parent"};
-      Token::Lazy selectable{"usg:selectable"};
     } usg;
-
-    // Render settings attribute tokens
-    Token::Lazy aspectRatioConformPolicy{"aspectRatioConformPolicy"};
-    Token::Lazy camera{"camera"};
-    Token::Lazy dataWindowNDC{"dataWindowNDC"};
-    Token::Lazy disableDepthOfField{"disableDepthOfField"};
-    Token::Lazy disableMotionBlur{"disableMotionBlur"};
-    Token::Lazy instantaneousShutter{"instantaneousShutter"};
-    Token::Lazy pixelAspectRatio{"pixelAspectRatio"};
-    Token::Lazy resolution{"resolution"};
-    Token::Lazy includedPurposes{"includedPurposes"};
-    Token::Lazy materialBindingPurposes{"materialBindingPurposes"};
-    Token::Lazy products{"products"};
-    Token::Lazy renderingColorSpace{"renderingColorSpace"};
-    Token::Lazy dataType{"dataType"};
-    Token::Lazy sourceName{"sourceName"};
-    Token::Lazy sourceType{"sourceType"};
-    Token::Lazy orderedVars{"orderedVars"};
-    Token::Lazy productName{"productName"};
-    Token::Lazy productType{"productType"};
-    Token::Lazy command{"command"};
-    Token::Lazy fileName{"fileName"};
-    Token::Lazy inputPasses{"inputPasses"};
-    Token::Lazy passType{"passType"};
-    Token::Lazy renderSource{"renderSource"};
-
-    // Render collection tokens
-    struct {
-      Token::Lazy cameraVisibility{"collection:cameraVisibility"};
-      Token::Lazy cameraVisibilityExcludes{"collection:cameraVisibility:excludes"};
-      Token::Lazy cameraVisibilityExpansionRule{"collection:cameraVisibility:expansionRule"};
-      Token::Lazy cameraVisibilityIncludeRoot{"collection:cameraVisibility:includeRoot"};
-      Token::Lazy cameraVisibilityIncludes{"collection:cameraVisibility:includes"};
-      Token::Lazy cameraVisibilityMembershipExpression{"collection:cameraVisibility:membershipExpression"};
-      Token::Lazy cameraVisibilityMode{"collection:cameraVisibility:mode"};
-      Token::Lazy matte{"collection:matte"};
-      Token::Lazy matteExcludes{"collection:matte:excludes"};
-      Token::Lazy matteExpansionRule{"collection:matte:expansionRule"};
-      Token::Lazy matteIncludeRoot{"collection:matte:includeRoot"};
-      Token::Lazy matteIncludes{"collection:matte:includes"};
-      Token::Lazy matteMembershipExpression{"collection:matte:membershipExpression"};
-      Token::Lazy matteMode{"collection:matte:mode"};
-      Token::Lazy prune{"collection:prune"};
-      Token::Lazy pruneExcludes{"collection:prune:excludes"};
-      Token::Lazy pruneExpansionRule{"collection:prune:expansionRule"};
-      Token::Lazy pruneIncludeRoot{"collection:prune:includeRoot"};
-      Token::Lazy pruneIncludes{"collection:prune:includes"};
-      Token::Lazy pruneMembershipExpression{"collection:prune:membershipExpression"};
-      Token::Lazy pruneMode{"collection:prune:mode"};
-      Token::Lazy renderVisibility{"collection:renderVisibility"};
-      Token::Lazy renderVisibilityExcludes{"collection:renderVisibility:excludes"};
-      Token::Lazy renderVisibilityExpansionRule{"collection:renderVisibility:expansionRule"};
-      Token::Lazy renderVisibilityIncludeRoot{"collection:renderVisibility:includeRoot"};
-      Token::Lazy renderVisibilityIncludes{"collection:renderVisibility:includes"};
-      Token::Lazy renderVisibilityMembershipExpression{"collection:renderVisibility:membershipExpression"};
-      Token::Lazy renderVisibilityMode{"collection:renderVisibility:mode"};
-    } renderCollection;
     // --(END CUSTOM CODE)--
   };
 

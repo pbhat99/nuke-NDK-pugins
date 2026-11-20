@@ -100,7 +100,6 @@ namespace lux {
     Attribute getShaderIdAttr() const;
     void setShaderId(const Token& value, fdk::TimeValue time = fdk::defaultTimeValue());
     Token getShaderId(fdk::TimeValue time = fdk::defaultTimeValue()) const;
-    Attribute getShaderIdAttrForRenderContext(const Token& renderContext) const;
 
     CollectionAPI getLightLink() const;
 

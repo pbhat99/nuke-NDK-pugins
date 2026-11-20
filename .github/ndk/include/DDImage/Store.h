@@ -37,7 +37,7 @@ namespace DD
       ChannelSetPtr,            // DD::Image::ChannelSet
       ChannelPtr,               // DD::Image::Channel
       FormatPairPtr,            // DD::Image::FormatPair
-#if kDDImageVersionMajorNum <= 17
+#if kDDImageVersionMajorNum <= 16
       MatrixPtr mFnDeprecatedInNuke14("Use FloatPtr/DoublePtr instead + Knob::numElements()"),
 #else
 #error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."

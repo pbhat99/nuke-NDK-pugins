@@ -133,7 +133,6 @@ namespace DD {
       bool _fileData = false;
       bool _readFromFile = false;
       bool _invalidFileError = false;
-      bool _unsupportedFileError = false;
       bool  _loadHint{true};
 
       int _version = 0;

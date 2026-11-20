@@ -25,7 +25,6 @@ namespace slr
       See SlrSurfaceShader and SlrLightShader for surface & light shading specifics.
   */
   class DDImage_API SlrCoShader : public SlrShader
-                                , public SlrShaderCutoutControlsI
   {
   public:
     //!
@@ -42,11 +41,7 @@ namespace slr
     //!
     SlrCoShader*  asCoShader() override { return this; }
 
-    //! Updates states from the cutout knobs.
-    void  updateProperties(const usg::ShaderDesc& shader_desc) override;
-
-    //! Default gets the format from baseInputShader(), and also copies cutout
-    //! enables (opacity traits) from it.
+    //! Default gets the format from input(connection 0).
     void _validateShader() override;
 
     //! Default gets the port's varying state from input(connection 0).
@@ -88,16 +83,6 @@ namespace slr
     virtual void  getResult(const SlrShadingContext&     stx,
                             const DD::Image::ChannelSet& get,
                             DD::Image::Pixel&            out) = 0;
-
-    //--------------------------------------
-
-    //! Shader turns on cutout mode, which is passed down to the surface shader and
-    //! applied by the integrator.
-    bool  cutoutModeEnabled() const override { return _cutoutModeEnabled; }
-
-    //! Shader turns on cutout data aovs mode, which is passed down to the surface shader
-    //! and applied by the integrator.
-    bool  cutoutModeRemovesDataAovsEnabled() const override { return (_cutoutModeEnabled && _cutoutModeRemovesDataAovsEnabled); }
 
 
   private:

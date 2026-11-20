@@ -19,7 +19,6 @@ namespace DD
   {
     class AxisVals;
     using AxisValsArray = std::vector<AxisVals>;  // Typically used for animation curves
-    using AxisValsSet = std::set<AxisVals>;
 
 
     /*! Encapsulates all the parameters in an Axis_Knob so they can be considered
@@ -30,7 +29,7 @@ namespace DD
     public:
       fdk::TimeValue   time;              //!< Sample time
 
-      // Parent xform params (always SRT order):
+      // Parent xform params:
       bool             parent_enable;     //!< Are parent transform values being used?
       fdk::Vec3d       parentT;           //!< Parent xform translation
       fdk::Vec3d       parentR;           //!< Parent xform rotation angles *in degrees* (always XYZ order)
@@ -64,7 +63,6 @@ namespace DD
 
       //! Compares time value. Used by the sort routine.
       bool operator < (const AxisVals& b) const { return (time < b.time); }
-      bool operator < (const fdk::TimeValue& t) const { return (time < t); }
 
       //! Print values out.
       void        print(const char*   prefix,
@@ -82,9 +80,6 @@ namespace DD
           \a xform_order and \a rot_order control the composition sequence.
       */
       fdk::Mat4d  localTransform()  const;
-
-      //! Build the transform matrix from parentTransform() * localTransform().
-      fdk::Mat4d  transform() const;
 
       //! Get the total scaling factor as a Vec3 (scaling * uniform_scale.)
       fdk::Vec3d  totalScaling() const { return (scaling * uniform_scale); }
@@ -123,70 +118,17 @@ namespace DD
           AxisVals. This is typically needed after matrix decomposition of a series
           of animated matrix keyframes.
 
-          \a target_rot_order specifies the preferred rotation order of the -local-
-          rotations for the filter to use on the entire series, usually taken from
-          \a rot_order of the first AxisVal. Parent rotations are always filtered
-          with XYZ rotation order.
+          \a target_rot_order specifies the preferred rotation order for the filter
+          to use on the entire series, usually taken from \a rot_order of the first
+          AxisVal.
 
           If \a sort is true the \a vals array is first sorted by time, then filtered.
       */
-      static void ApplyEulerFilter(fdk::RotateOrder target_rot_order,
+      static void applyEulerFilter(fdk::RotateOrder target_rot_order,
                                    AxisValsArray&   vals,
                                    bool             sort = false);
 
-      //! Retrieve iterators to the AxisVals in \a valsSet which times match \a time.
-      //! If \a time falls exactly on an AxisVals or is before the first or after the
-      //! then both iterators will be set to the same AxisVals.
-      //! If a\ time falls between two AxisVals then the two iterators will be of
-      //! the AxisVals before and after \a time and the interpolation factor 't'
-      //! (0..1) will be returned.
-      static float GetAxisValsAtTime(const AxisValsSet&           valsSet,
-                                     const fdk::TimeValue&        time,
-                                     AxisValsSet::const_iterator& vals0,
-                                     AxisValsSet::const_iterator& vals1);
     };
-
-
-
-    //-----------------------------------------------------------------------------
-    //-----------------------------------------------------------------------------
-
-    inline /*static*/
-    float AxisVals::GetAxisValsAtTime(const AxisValsSet&           valsSet,
-                                      const fdk::TimeValue&        time,
-                                      AxisValsSet::const_iterator& key0,
-                                      AxisValsSet::const_iterator& key1)
-    {
-      if (valsSet.size() == 0) {
-        key0 = key1 = valsSet.end(); // no match
-        return 0.0f;
-      }
-      else if (valsSet.size() == 1) {
-        key0 = key1 = valsSet.begin(); // constant key
-        return 0.0f;
-      }
-
-      AxisVals vals; vals.time = time;
-      key1 = valsSet.lower_bound(vals);
-      if (key1->time == time) {
-        key0 = key1; // at key - most common case
-        return 0.0f;
-      }
-      else if (key1 == valsSet.begin()) {
-        key0 = key1; // before or at first key
-        return 0.0f;
-      }
-      else if (key1 == valsSet.end()) {
-        --key1; // past last key, clamp to last
-        key0 = key1;
-        return 1.0f;
-      }
-      else {
-        key0 = key1; // between two keys
-        --key0;
-        return static_cast<float>((time - key0->time) / (key1->time - key0->time));
-      }
-    }
 
   }
 }

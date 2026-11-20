@@ -11,10 +11,10 @@
 #include <string.h>
 #include <limits>
 
-#if kDDImageVersionMajorNum <= 17
+#if kDDImageVersionMajorNum <= 16
 #include "DDImage/Deprecation.h"
 #else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
 #endif
 
 namespace DD
@@ -49,7 +49,6 @@ namespace DD
       float&       operator [] (Channel z)       { return chan[z]; }
       const float& operator [] (Channel z) const { return chan[z]; }
       float* array() { return chan; }
-      const float* array() const { return chan; }
 
       //-----------------------------------------------------
 
@@ -70,16 +69,6 @@ namespace DD
       void erase(Channel z)               { chan[z] = 0.0f; }
       void erase(const ChannelSet& mask)  { for (auto z : mask) { chan[z] = 0.0f; } }
       void erase(const ChannelPack& mask) { for (auto z : mask) { chan[z] = 0.0f; } }
-
-      void copy(const float* array, const ChannelSet& c)  { for (auto z : c) { chan[z] = array[z]; } }
-      void copy(const float* array, const ChannelPack& c) { for (auto z : c) { chan[z] = array[z]; } }
-      void copy(const Pixel& b, const ChannelSet& c)  { for (auto z : c) { chan[z] = b.chan[z]; } }
-      void copy(const Pixel& b, const ChannelPack& c) { for (auto z : c) { chan[z] = b.chan[z]; } }
-
-      void copyWeighted(const float* array, const ChannelSet& c, float w)  { for (auto z : c) { chan[z] = array[z] * w; } }
-      void copyWeighted(const float* array, const ChannelPack& c, float w) { for (auto z : c) { chan[z] = array[z] * w; } }
-      void copyWeighted(const Pixel& b, const ChannelSet& c, float w)  { for (auto z : c) { chan[z] = b.chan[z] * w; } }
-      void copyWeighted(const Pixel& b, const ChannelPack& c, float w) { for (auto z : c) { chan[z] = b.chan[z] * w; } }
 
       void replace(const Pixel& b, const ChannelSet& c)  { for (auto z : c) { chan[z] = b.chan[z]; } }
       void replace(const Pixel& b, const ChannelPack& c) { for (auto z : c) { chan[z] = b.chan[z]; } }
@@ -121,26 +110,16 @@ namespace DD
 
       //! Destructive linear interpolate between this Pixel and Pixel \a b by \a t(0..1).
       void lerp(const Pixel& b, float t);
-      void lerp(const Pixel& b, float t, Channel z);
       void lerp(const Pixel& b, float t, const ChannelSet& channels);
       void lerp(const Pixel& b, float t, const ChannelPack& channels);
 
-      void over(const Pixel& A, float a); //!< Only overs RGBA channels
-      void over(const Pixel& A, float a, Channel z);
       void over(const Pixel& A, float a, const ChannelSet& channels);
       void over(const Pixel& A, float a, const ChannelPack& channels);
+      void over(const Pixel& A, float a);
 
-      // Unders using this Pixel's alpha:
-      void under(const Pixel& A); //!< Only overs RGBA channels
-      void under(const Pixel& A, Channel z);
       void under(const Pixel& A, const ChannelSet& channels);
       void under(const Pixel& A, const ChannelPack& channels);
-
-      // Unders using a provided B alpha:
-      void under(float Ba, const Pixel& A); //!< Only overs RGBA channels
-      void under(float Ba, const Pixel& A, Channel z);
-      void under(float Ba, const Pixel& A, const ChannelSet& channels);
-      void under(float Ba, const Pixel& A, const ChannelPack& channels);
+      void under(const Pixel& A);
 
       // Multiply each channel using a separate ChannelSet or ChannelPack:
       void multiply(float d, const ChannelSet& channels);
@@ -173,10 +152,6 @@ namespace DD
       void plus(float d, const ChannelPack& channels);
       void plus(const Pixel& b, const ChannelSet& channels);
       void plus(const Pixel& b, const ChannelPack& channels);
-      void plusWeighted(const float* array, const ChannelSet& channels, float w);
-      void plusWeighted(const float* array, const ChannelPack& channels, float w);
-      void plusWeighted(const Pixel& b, const ChannelSet& channels, float w);
-      void plusWeighted(const Pixel& b, const ChannelPack& channels, float w);
       // Convenience for remapped-channel combos:
       void plusVec2Chans(float x, float y, Channel* clist);
       void plusVec2Chans(const fdk::Vec2f& v, Channel* clist) { plusVec2Chans(v.x, v.y, clist); }
@@ -304,7 +279,7 @@ namespace DD
       const fdk::Vec3f&   normal() const { return   N(); }
 
 
-#if kDDImageVersionMajorNum <= 17
+#if kDDImageVersionMajorNum <= 16
     public:
       //--------------------------------------------------------------------------------
       // Deprecated blending functions with incorrect math - will disappear in a Nuke major rev after 16
@@ -314,7 +289,7 @@ namespace DD
       mFnDeprecatedInNuke14("under(Pixel, float) has been deprecated, use under(Pixel) instead.")
         void under(const Pixel& A, float a);
 #else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
 #endif
 
     private:
@@ -473,56 +448,21 @@ inline void
 Pixel::lerp(const Pixel& b, float t)
 {
   const float invt = 1.0f - t;
-  for (auto z : b.channels) { chan[z] = (chan[z] * invt) + (b.chan[z] * t); }
-}
-
-inline void
-Pixel::lerp(const Pixel& b, float t, Channel z)
-{
-  chan[z] = (chan[z] * (1.0f - t)) + b.chan[z] * t;
+  for (auto z : b.channels) { chan[z] = chan[z] * invt + b.chan[z] * t; }
 }
 
 inline void
 Pixel::lerp(const Pixel& b, float t, const ChannelSet& channels)
 {
   const float invt = 1.0f - t;
-  for (auto z : channels) { chan[z] = (chan[z] * invt) + (b.chan[z] * t); }
+  for (auto z : channels) { chan[z] = chan[z] * invt + b.chan[z] * t; }
 }
 
 inline void
 Pixel::lerp(const Pixel& b, float t, const ChannelPack& channels)
 {
   const float invt = 1.0f - t;
-  for (auto z : channels) { chan[z] = (chan[z] * invt) + (b.chan[z] * t); }
-}
-
-inline void
-Pixel::over(const Pixel& A, float a)
-{
-  if (a < std::numeric_limits<float>::epsilon()) {
-    for (unsigned z = 1; z <= 4; ++z) { chan[z] += A.chan[z]; }
-  }
-  else if (a < 1.0f) {
-    a = 1.0f - a;
-    for (unsigned z = 1; z <= 4; ++z) { chan[z] = (chan[z] * a) + A.chan[z]; }
-  }
-  else {
-    for (unsigned z = 1; z <= 4; ++z) { chan[z] = A.chan[z]; }
-  }
-}
-
-inline void
-Pixel::over(const Pixel& A, float a, Channel z)
-{
-  if (a < std::numeric_limits<float>::epsilon()) {
-    chan[z] += A.chan[z];
-  }
-  else if (a < 1.0f) {
-    chan[z] = (chan[z] * (1.0f - a)) + A.chan[z];
-  }
-  else {
-    chan[z] = A.chan[z];
-  }
+  for (auto z : channels) { chan[z] = chan[z] * invt + b.chan[z] * t; }
 }
 
 inline void
@@ -533,7 +473,7 @@ Pixel::over(const Pixel& A, float a, const ChannelSet& channels)
   }
   else if (a < 1.0f) {
     a = 1.0f - a;
-    for (auto z : channels) { chan[z] = (chan[z] * a) + A.chan[z]; }
+    for (auto z : channels) { chan[z] = chan[z] * a + A.chan[z]; }
   }
   else {
     for (auto z : channels) { chan[z] = A.chan[z]; }
@@ -548,7 +488,7 @@ Pixel::over(const Pixel& A, float a, const ChannelPack& channels)
   }
   else if (a < 1.0f) {
     a = 1.0f - a;
-    for (auto z : channels) { chan[z] = (chan[z] * a) + A.chan[z]; }
+    for (auto z : channels) { chan[z] = chan[z] * a + A.chan[z]; }
   }
   else {
     for (auto z : channels) { chan[z] = A.chan[z]; }
@@ -556,8 +496,50 @@ Pixel::over(const Pixel& A, float a, const ChannelPack& channels)
 }
 
 inline void
-Pixel::under(float Ba, const Pixel& A)
+Pixel::over(const Pixel& A, float a)
 {
+  if (a < std::numeric_limits<float>::epsilon()) {
+    for (unsigned z = 1; z <= 4; ++z) { chan[z] += A.chan[z]; }
+  }
+  else if (a < 1.0f) {
+    a = 1.0f - a;
+    for (unsigned z = 1; z <= 4; ++z) { chan[z] = chan[z] * a + A.chan[z]; }
+  }
+  else {
+    for (unsigned z = 1; z <= 4; ++z) { chan[z] = A.chan[z]; }
+  }
+}
+
+inline void
+Pixel::under(const Pixel& A, const ChannelSet& channels)
+{
+  float Ba = alpha();
+  if (Ba < std::numeric_limits<float>::epsilon()) {
+    for (auto z : channels) { chan[z] += A.chan[z]; }
+  }
+  else if (Ba < 1.0f) {
+    Ba = 1.0f - Ba;
+    for (auto z : channels) { chan[z] += A.chan[z] * Ba; }
+  }
+}
+
+inline void
+Pixel::under(const Pixel& A, const ChannelPack& channels)
+{
+  float Ba = alpha();
+  if (Ba < std::numeric_limits<float>::epsilon()) {
+    for (auto z : channels) { chan[z] += A.chan[z]; }
+  }
+  else if (Ba < 1.0f) {
+    Ba = 1.0f - Ba;
+    for (auto z : channels) { chan[z] += A.chan[z] * Ba; }
+  }
+}
+
+inline void
+Pixel::under(const Pixel& A)
+{
+  float Ba = alpha();
   if (Ba < std::numeric_limits<float>::epsilon()) {
     for (unsigned z = 1; z <= 4; ++z) { chan[z] += A.chan[z]; }
   }
@@ -566,46 +548,6 @@ Pixel::under(float Ba, const Pixel& A)
     for (unsigned z = 1; z <= 4; ++z) { chan[z] += A.chan[z] * Ba; }
   }
 }
-
-inline void
-Pixel::under(float Ba, const Pixel& A, Channel z)
-{
-  if (Ba < std::numeric_limits<float>::epsilon()) {
-    chan[z] += A.chan[z];
-  }
-  else if (Ba < 1.0f) {
-    chan[z] += A.chan[z] * (1.0f - Ba);
-  }
-}
-
-inline void
-Pixel::under(float Ba, const Pixel& A, const ChannelSet& channels)
-{
-  if (Ba < std::numeric_limits<float>::epsilon()) {
-    for (auto z : channels) { chan[z] += A.chan[z]; }
-  }
-  else if (Ba < 1.0f) {
-    Ba = 1.0f - Ba;
-    for (auto z : channels) { chan[z] += A.chan[z] * Ba; }
-  }
-}
-
-inline void
-Pixel::under(float Ba, const Pixel& A, const ChannelPack& channels)
-{
-  if (Ba < std::numeric_limits<float>::epsilon()) {
-    for (auto z : channels) { chan[z] += A.chan[z]; }
-  }
-  else if (Ba < 1.0f) {
-    Ba = 1.0f - Ba;
-    for (auto z : channels) { chan[z] += A.chan[z] * Ba; }
-  }
-}
-
-inline void Pixel::under(const Pixel& A) { under(alpha(), A); }
-inline void Pixel::under(const Pixel& A, Channel z) { under(alpha(), A, z); }
-inline void Pixel::under(const Pixel& A, const ChannelSet& channels) { under(alpha(), A, channels); }
-inline void Pixel::under(const Pixel& A, const ChannelPack& channels) { under(alpha(), A, channels); }
 
 inline Pixel Pixel::get(const ChannelSet& getChans) const
 {
@@ -684,10 +626,6 @@ inline void Pixel::plus(float d, const ChannelSet& channels) { for (auto z : cha
 inline void Pixel::plus(float d, const ChannelPack& channels) { for (auto z : channels) { chan[z] += d; } }
 inline void Pixel::plus(const Pixel& b, const ChannelSet& channels) { for (auto z : channels) { chan[z] += b.chan[z]; } }
 inline void Pixel::plus(const Pixel& b, const ChannelPack& channels) { for (auto z : channels) { chan[z] += b.chan[z]; } }
-inline void Pixel::plusWeighted(const float* array, const ChannelSet& channels, float w) { for (auto z : channels) { chan[z] += array[z] * w; } }
-inline void Pixel::plusWeighted(const float* array, const ChannelPack& channels, float w) { for (auto z : channels) { chan[z] += array[z] * w; } }
-inline void Pixel::plusWeighted(const Pixel& b, const ChannelSet& channels, float w) { for (auto z : channels) { chan[z] += b.chan[z] * w; } }
-inline void Pixel::plusWeighted(const Pixel& b, const ChannelPack& channels, float w) { for (auto z : channels) { chan[z] += b.chan[z] * w; } }
 inline void Pixel::plusVec2Chans(float x, float y, Channel* clist)
 {
   chan[clist[0]] += x;
@@ -731,7 +669,7 @@ inline void Pixel::minusVec4Chans(float x, float y, float z, float w, Channel* c
 }
 //------------------------------------------------
 
-#if kDDImageVersionMajorNum <= 17
+#if kDDImageVersionMajorNum <= 16
 // Deprecated, uses incorrect math
 inline void
 Pixel::under(const Pixel& A, float a, const ChannelSet& channels)
@@ -764,7 +702,7 @@ Pixel::under(const Pixel& A, float a)
   }
 }
 #else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
 #endif
 
 

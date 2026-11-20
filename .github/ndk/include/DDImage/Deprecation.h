@@ -25,24 +25,23 @@
 #endif
 
 #if kDDImageVersionMajorNum <= 17
+#define mFnDeprecatedInNuke17(msg) [[deprecated(msg)]]
+#endif
+
+#if kDDImageVersionMajorNum <= 16
 #  ifdef NUKE_DISABLE_DEPRECATIONS
-#    define mFnDeprecatedInNuke17(msg)
 #    define mFnDeprecatedInNuke16(msg)
 #    define mFnDeprecatedDDImageHalfInNuke16(msg)
 #    define mFnDeprecatedInNuke14(msg)
 #    define mFnDeprecatedLegacy3DSystemInNuke14(msg)
-#    define mFnDeprecatedStlAllocatorInNuke17(msg)
 #  else
-#    define mFnDeprecatedInNuke17(msg) [[deprecated(msg)]]
 #    define mFnDeprecatedInNuke16(msg) [[deprecated(msg)]]
 #    define mFnDeprecatedInNuke14(msg) [[deprecated(msg)]]
 #    ifdef NUKE_DISABLE_LEGACY3DSYSTEM_DEPRECATIONS
 #      define mFnDeprecatedDDImageHalfInNuke16(msg)
 #      define mFnDeprecatedLegacy3DSystemInNuke14(msg)
-#      define mFnDeprecatedStlAllocatorInNuke17(msg)
 #    else
 #      define mFnDeprecatedLegacy3DSystemInNuke14(msg) [[deprecated(msg)]]
-#      define mFnDeprecatedStlAllocatorInNuke17(msg) [[deprecated(msg)]]
 #    endif
 #    ifdef NUKE_DISABLE_DDIMAGEHALF_DEPRECATIONS
 #      define mFnDeprecatedDDImageHalfInNuke16(msg)
@@ -52,35 +51,4 @@
 #  endif
 #endif
 
-/// Macros to suppress deprecated-declaration warnings around a block of code.
-///
-/// Usage:
-/// \code
-///   FN_SUPPRESS_DEPRECATED_WARNINGS_BEGIN
-///   some_deprecated_function();
-///   FN_SUPPRESS_DEPRECATED_WARNINGS_END
-/// \endcode
-#ifdef __clang__
-#  define FN_SUPPRESS_DEPRECATED_WARNINGS_BEGIN \
-     _Pragma("clang diagnostic push") \
-     _Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")
-#  define FN_SUPPRESS_DEPRECATED_WARNINGS_END \
-     _Pragma("clang diagnostic pop")
-#elif defined(__GNUC__)
-#  define FN_SUPPRESS_DEPRECATED_WARNINGS_BEGIN \
-     _Pragma("GCC diagnostic push") \
-     _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
-#  define FN_SUPPRESS_DEPRECATED_WARNINGS_END \
-     _Pragma("GCC diagnostic pop")
-#elif defined(_MSC_VER)
-#  define FN_SUPPRESS_DEPRECATED_WARNINGS_BEGIN \
-     __pragma(warning(push)) \
-     __pragma(warning(disable: 4996))
-#  define FN_SUPPRESS_DEPRECATED_WARNINGS_END \
-     __pragma(warning(pop))
-#else
-#  define FN_SUPPRESS_DEPRECATED_WARNINGS_BEGIN
-#  define FN_SUPPRESS_DEPRECATED_WARNINGS_END
 #endif
-
-#endif  // DDIMAGE_DEPRECATION_H

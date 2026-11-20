@@ -41,8 +41,8 @@ namespace DD
     class ReadFileKnobOwner;
     class Histogram_Data;
     class FrameExtentProviderI;
-    struct SceneItem;
-    struct ConvolveArray;
+    class SceneItem;
+    class ConvolveArray;
 
 #ifndef DOXYGEN
 
@@ -79,22 +79,13 @@ namespace DD
 
       bool             _makeKnobs;            //!< Knob_Closure should create Knob allocations
       Knob*            _lastMadeKnob;         //!< Most recent Knob created in call()
-      Knob*            _lastMadeCompoundKnob; //!< Most recent compound Knob created in call()
       KnobStoreContext _lastStoredContext;    //!< Filled in during call() when Knob::store() gets called
-#if kDDImageVersionMajorNum <= 17
       mFnDeprecatedInNuke14("_queryingKnobs is unused. Implement in subclass if needed.")
       bool             _queryingKnobs;        //!< deprecated, no longer used
-#else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
-#endif
 
-#if kDDImageVersionMajorNum <= 17
     protected:
       mFnDeprecatedInNuke14("enableKnobQuerying() is unused. Implement in subclass if needed.")
       void enableKnobQuerying();
-#else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
-#endif
 
     public:
       Knob_Closure(bool makeKnobs = false);
@@ -184,16 +175,12 @@ namespace DD
       //! Do any knobs processed so far have animation enabled? Only valid during knob store.
       virtual bool animatingKnobs() const { return false; }
 
-#if kDDImageVersionMajorNum <= 17
       /** Return whether or not this callback is being used to query/list the knobs an
        * Op has. This can be used to perform introspection on an Op to see the kinds
        * of knobs it uses.
        */
       mFnDeprecatedInNuke14("queryingKnobs() is unused. Implement in subclass if needed.")
       bool queryingKnobs() const;
-#else
-#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
-#endif
 
       /** Returns false if the knob will be filtered out by name, for
           CustomKnob macros to avoid creating the knob if not used */
@@ -202,9 +189,8 @@ namespace DD
       // extra crap only used by when makeKnobs is true:
       virtual void constructed( Knob* ) {}
       virtual size_t getKnobCount() const { return 0; }
-      void setLastMadeKnob(Knob* k) { _lastMadeKnob = k; }
+      void setLastMadeKnob( Knob* k ) { _lastMadeKnob = k; }
       Knob* getLastMadeKnob() const { return _lastMadeKnob; }
-      Knob* getLastMadeCompoundKnob() const { return _lastMadeCompoundKnob; }
     };
 
     typedef Knob_Closure& Knob_Callback;
@@ -313,10 +299,6 @@ namespace DD
       PATH_KNOB,                       // For entering scene graph paths
       GSV_KNOB,                        // For Graph Scope Variables (MultiShot)
       BLINKEDITOR_KNOB,                // Extension of python knob with specific data for the BlinkScript editor.
-      VEC2_KNOB,                       // Stores 2 floats/doubles, presented as two numerical entry boxes with customisable labels.
-      USD_SCENE_GRAPH_KNOB,            // Improved display of hierarchical scene data updated for viewing or manipulating USD stages
-      VEC3_KNOB,                       // Stores 3 floats/doubles, presented as three numerical entry boxes with customisable labels.
-      VEC4_KNOB,                       // Stores 4 floats/doubles, presented as four numerical entry boxes with customisable labels.
       LAST_KNOB
     };
 
@@ -336,22 +318,6 @@ namespace DD
       int count;
       int input;
       ndk::ChannelManager* chanmgr; // for internal use only
-    };
-
-    struct Vec2KnobData {
-      const char* xLabel;
-      const char* yLabel;
-    };
-    struct Vec3KnobData {
-      const char* xLabel;
-      const char* yLabel;
-      const char* zLabel;
-    };
-    struct Vec4KnobData {
-      const char* xLabel;
-      const char* yLabel;
-      const char* zLabel;
-      const char* wLabel;
     };
 
 #endif // !DOXYGEN
@@ -577,7 +543,6 @@ namespace DD
       Cube_File = 10, //< 3D LUT, RED specific file format
       Blib_File = 11,
       Directories = 12,
-      Splat_Source_File = 13,
     };
 
     /*!
@@ -677,11 +642,6 @@ namespace DD
       return f( SCENE_GRAPH_KNOB, IntPtr, p, n, l, e );
     }
 
-    inline Knob* USDSceneGraph_knob(Knob_Callback f, const NAME n, const LABEL l)
-    {
-      return f(USD_SCENE_GRAPH_KNOB, Custom, nullptr, n, l, nullptr);
-    }
-
     inline Knob* SceneView_knob( Knob_Callback f, int* p, ENUM_LABELS e, NAME n, LABEL l = nullptr )
     {
       return f( SCENE_VIEW_KNOB, IntPtr, p, n, l, e );
@@ -747,12 +707,6 @@ namespace DD
     inline Knob* Bool_knob(Knob_Callback f, bool* p, NAME n, LABEL l = nullptr)
     {
       return f(BOOL_KNOB, BoolPtr, p, n, l, nullptr);
-    }
-
-    //! Displays as Bool_knob but has integer arg (ie int 1 = true, int 0 = false.)
-    inline Knob* BoolInt_knob(Knob_Callback f, int* p, NAME n, LABEL l = nullptr)
-    {
-      return f(BOOL_KNOB, IntPtr, p, n, l, nullptr);
     }
 
     /*! Controls a single number stored as a double */
@@ -849,8 +803,9 @@ namespace DD
     /*!
        Same as ChannelSet_knob, but the UI menu puts all channels not returned by
        Op::node_input(\a input) into a sub menu called "Other Layers". If input < 0 then
-       the menu will show channels provided by \a chanmgr, not an input Iop.
-       \a chanmgr is currently for internal use only.
+       the menu will show channels specified by Channel_KnobI::setAvailableChannels(),
+       not an input Iop.
+       \a chanmgr is for internal use only.
      */
     inline Knob* Input_ChannelSet_knob(Knob_Callback f, ChannelSet* p, int input, NAME n, LABEL l = nullptr, ndk::ChannelManager* chanmgr = nullptr)
     {
@@ -861,8 +816,8 @@ namespace DD
     /*!
        Same as ChannelSet_knob, but the UI menu only shows channels returned by
        Op::node_input(\a input). If input < 0 then the menu will only show channels
-       provided by \a chanmgr, not an input Iop.
-       \a chanmgr is currently for internal use only.
+       specified by Channel_KnobI::setAvailableChannels(), not an input Iop.
+       \a chanmgr is for internal use only.
      */
     inline Knob* InputOnly_ChannelSet_knob(Knob_Callback f, ChannelSet* p, int input, NAME n, LABEL l = nullptr, ndk::ChannelManager* chanmgr = nullptr)
     {
@@ -891,8 +846,9 @@ namespace DD
        listed in the top level UI menu. All other channels are listed in the "other"
        submenu (and if this input is not connected to an Iop then all layers are listed).
        This is used to store channel numbers that your operator will read from. If input < 0
-       then the menu will show channels provided by \a chanmgr, not an input Iop.
-       \a chanmgr is currently for internal use only.
+       then the menu will show channels specified by Channel_KnobI::setAvailableChannels(),
+       not an input Iop.
+       \a chanmgr is for internal use only.
      */
     inline Knob* Input_Channel_knob(Knob_Callback f, Channel* p, int count, int input, NAME n, LABEL l = nullptr, ndk::ChannelManager* chanmgr = nullptr)
     {
@@ -904,8 +860,9 @@ namespace DD
        Same as Input_Channel_knob but the popup menu only shows layers that exist in the
        \a input Iop. If this input is not connected to an Iop then all layers are listed. This
        is used to store channel numbers that your operator will read from. If input < 0 then
-       the menu will only show channels provided by \a chanmgr, not an input Iop.
-       \a chanmgr is currently for internal use only.
+       the menu will only show channels specified by Channel_KnobI::setAvailableChannels(),
+       not an input Iop.
+       \a chanmgr is for internal use only.
      */
     inline Knob* InputOnly_Channel_knob(Knob_Callback f, Channel* p, int count, int input, NAME n, LABEL l = nullptr, ndk::ChannelManager* chanmgr = nullptr)
     {
@@ -1262,12 +1219,6 @@ namespace DD
       return f(TAB_KNOB, Custom, nullptr, name, label, (void*)(long long)2/*DefaultClosed*/);
     }
 
-    //! Same as BeginOpenGroup() or BeginClosedGroup() depending on \a groupOpenByDefault state.
-    inline Knob* BeginGroup(Knob_Callback f, bool groupOpenByDefault, NAME name, LABEL label = nullptr)
-    {
-      return (groupOpenByDefault) ? BeginOpenGroup(f, name, label) : BeginClosedGroup(f, name, label);
-    }
-
     /*!
        Ends a hierarchy level.
      */
@@ -1466,52 +1417,6 @@ namespace DD
     inline Knob* Python_knob(Knob_Callback f, NAME command, NAME n, LABEL l = nullptr)
     {
       return f(PYTHON_KNOB, Custom, nullptr, n, l, (const char* const*)command);
-    }
-
-    /*!
-       Makes two numbers with custom labels for the x and y values.
-     */
-    inline Knob* Vec2d_knob(Knob_Callback f, double* p, NAME n, LABEL l = nullptr, LABEL xLabel = nullptr, LABEL yLabel = nullptr)
-    {
-      Vec2KnobData data{xLabel, yLabel};
-      return f(VEC2_KNOB, DoublePtr, p, n, l, (void*)&data);
-    }
-    inline Knob* Vec2f_knob(Knob_Callback f, float* p, NAME n, LABEL l = nullptr, LABEL xLabel = nullptr, LABEL yLabel = nullptr)
-    {
-      Vec2KnobData data{xLabel, yLabel};
-      return f(VEC2_KNOB, FloatPtr, p, n, l, (void*)&data);
-    }
-
-    /*!
-       Makes three numbers with custom labels for the x, y and z values.
-     */
-    inline Knob* Vec3d_knob(Knob_Callback f, double* p, NAME n, LABEL l = nullptr, 
-                            LABEL xLabel = nullptr, LABEL yLabel = nullptr, LABEL zLabel = nullptr)
-    {
-      Vec3KnobData data{xLabel, yLabel, zLabel};
-      return f(VEC3_KNOB, DoublePtr, p, n, l, (void*)&data);
-    }
-    inline Knob* Vec3f_knob(Knob_Callback f, float* p, NAME n, LABEL l = nullptr, 
-                            LABEL xLabel = nullptr, LABEL yLabel = nullptr, LABEL zLabel = nullptr)
-    {
-      Vec3KnobData data{xLabel, yLabel, zLabel};
-      return f(VEC3_KNOB, FloatPtr, p, n, l, (void*)&data);
-    }
-
-    /*!
-       Makes four numbers with custom labels for the x, y and z values.
-     */
-    inline Knob* Vec4d_knob(Knob_Callback f, double* p, NAME n, LABEL l = nullptr, 
-                            LABEL xLabel = nullptr, LABEL yLabel = nullptr, LABEL zLabel = nullptr, LABEL wLabel = nullptr)
-    {
-      Vec4KnobData data{xLabel, yLabel, zLabel, wLabel};
-      return f(VEC4_KNOB, DoublePtr, p, n, l, (void*)&data);
-    }
-    inline Knob* Vec4f_knob(Knob_Callback f, float* p, NAME n, LABEL l = nullptr, 
-                            LABEL xLabel = nullptr, LABEL yLabel = nullptr, LABEL zLabel = nullptr, LABEL wLabel = nullptr)
-    {
-      Vec4KnobData data{xLabel, yLabel, zLabel, wLabel};
-      return f(VEC4_KNOB, FloatPtr, p, n, l, (void*)&data);
     }
 
     /*!

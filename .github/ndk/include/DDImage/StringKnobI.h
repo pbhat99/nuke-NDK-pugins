@@ -4,7 +4,6 @@
 #define DDIMAGE_STRINGKNOBI_H
 
 #include "DDImage/DDImage_API.h"
-#include "DDImage/ValueProvider.h"
 
 namespace DD {
   namespace Image {
@@ -13,7 +12,7 @@ namespace DD {
 
     //! \class DD::Image::StringKnobI
     //! \brief interface class for an array of characters or a string.
-    class StringKnobI : public ValueProvidableI
+    class StringKnobI
     {
     public:
       static const int kNoSelection = -1; //< indicates no selection in callback

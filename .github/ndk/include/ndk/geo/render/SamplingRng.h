@@ -69,15 +69,6 @@ namespace ndk {
   private:
     int32_t _seed, _val;
     int32_t _table[32];
-
-    //! Temporary vectors used in sample generation.
-    //! They don't need to be member variables, they are just stored here to
-    //! avoid reallocations when iterating through scanlines.
-    //! Please note that the that this makes the SamplingRng objects non-threadsafe.
-    std::vector<int32_t> _perm1d;
-    std::vector<int32_t> _perm2d;
-    std::vector<int32_t> _index;
-    std::vector<fdk::Vec2f> _bin_grid;
   };
 
   using SamplingRngList = std::vector<SamplingRng>;

@@ -27,69 +27,17 @@ namespace ndk {
     const CameraLensApertureParameters&  lensApertureProperties() const { return _params.lensAperture; }
     const CameraOpticsParameters&        opticsProperties()       const { return _params.optics; }
 
-
-    //! Set Camera::Sample parameters to the standard defaults for MultiProjectionCamera.
-    static void  SetSampleDefaults(Camera::Sample& properties);
-
-    //! Set Camera::Sample to the standard defaults for MultiProjectionCamera; calls
-    //! SetSampleDefaults().
-    void  setSampleToDefault(Camera::Sample& properties) const override;
-
     //-----------------------------------------------------------------
 
     //! Sets \a _horizontalAperture using field-of-view angle **in degrees**.
     //! Focal length remains the same.
     void    setHorizontalFov(double angleInDegrees);
 
-    //! Horizontal/vertical sensor size - in millimeters
-    const fdk::Vec2d&  apertureSize() const { return _params.apertureSize(); }
+    double  horizontalAperture() const { return _params.sensor.apertureSize.x; }
+    void    setHorizontalAperture(double w) { _params.sensor.apertureSize.x = w; }
 
-    //! Set the sensor physical size - in millimeters.
-    void  setApertureSize(const fdk::Vec2d& sizeInMm) { _params.setApertureSize(sizeInMm); }
-
-    double  horizontalAperture() const { return _params.apertureSize().x; }
-    void    setHorizontalAperture(double widthInMm) { _params.sensor.apertureSize.x = widthInMm; }
-
-    double  verticalAperture() const { return _params.apertureSize().y; }
-    void    setVerticalAperture(double heightInMm) { _params.sensor.apertureSize.y = heightInMm; }
-
-    //! Returns the sensor offset in millimeters by converting apertureWindowTranslate from
-    //! square (1:1) NDC units via scaling with apertureSize.x.
-    //! Important - apertureSize.x must already be set for this to work correctly, and note
-    //! that the conversion from NDC units must ONLY use apertureSize.x and NEVER
-    //! apertureSize.y, since aperture NDC space is always 1:1 square.
-    fdk::Vec2d  apertureOffset() const { return _params.apertureOffset(); }
-
-    //! Sets apertureWindowTranslate using sensor aperture offset units (millimeters).
-    //! Important - apertureSize must be already configured as \a offsetInMm is normalized
-    //! (scaled) to NDC units by apertureSize.x ONLY, keeping the NDC x/y change in
-    //! distance ratio 1:1.
-    void  setApertureOffset(const fdk::Vec2d& apTxy) { _params.setApertureOffset(apTxy); }
-    void  setApertureOffset(double apTx, double apTy) { _params.setApertureOffset({apTx, apTy}); }
-
-    //! Same but aperture width is passed as well This is for convenience when apertureSize is not
-    //! set in millimeters (for example in cameras with non-physical sensor sizes like [1.0 2.0]).
-    void  setApertureOffset(const fdk::Vec2d& offsetInMm, double apertureWidthInMm) { _params.setApertureOffset(offsetInMm, apertureWidthInMm); }
-
-    //! NDC window translation in square (1:1) NDC ratio. See NDC notes in Camera.h.
-    fdk::Vec2d  windowTranslate() const { return _params.apertureWindowTranslate(); }
-
-    //! Set the NDC window translation in square (1:1) NDC ratio. See NDC notes in Camera.h.
-    void  setWindowTranslate(const fdk::Vec2d& winTxy) { _params.setApertureWindowTranslate(winTxy); }
-    void  setWindowTranslate(double winTx, double winTy) { _params.setApertureWindowTranslate({winTx, winTy}); }
-
-    //! Rotation of sensor window - in degrees
-    double  windowRotate() const { return _params.apertureWindowRotate(); }
-    double  windowRotateZ() const { return _params.apertureWindowRotate(); }
-    void    setWindowRotate(double angleInDegrees) { _params.setApertureWindowRotate(angleInDegrees); }
-    void    setWindowRotateZ(double angleInDegrees) { _params.setApertureWindowRotate(angleInDegrees); }
-
-    //! Scaling percentage of sensor window
-    const fdk::Vec2d&  windowScale() const { return _params.apertureWindowScale(); }
-    void  setWindowScale(const fdk::Vec2d& apSxy) { _params.setApertureWindowScale(apSxy); }
-    void  setWindowScale(double apSx, double apSy) { _params.setApertureWindowScale({apSx, apSy}); }
-
-    //-----------------------------------------------------------------
+    double  verticalAperture() const { return _params.sensor.apertureSize.y; }
+    void    setVerticalAperture(double h) { _params.sensor.apertureSize.y = h; }
 
     double  focalLength() const { return _params.optics.focalLength; }
     void    setFocalLength(double f) { _params.optics.focalLength = f; }
@@ -105,6 +53,17 @@ namespace ndk {
 
     double  focusDistance() const { return _params.optics.focusDistance; }
     void    setFocusDistance(double f) { _params.optics.focusDistance = f; }
+
+    //-----------------------------------------------------------------
+
+    const fdk::Vec2d&  windowTranslate() const { return _params.sensor.apertureTranslate; }
+    void               setWindowTranslate(double tx, double ty) { _params.sensor.apertureTranslate.set(tx, ty); }
+
+    const fdk::Vec2d&  windowScale() const { return _params.sensor.apertureScale; }
+    void               setWindowScale(double sx, double sy) { _params.sensor.apertureScale.set(sx, sy); }
+
+    double             windowRotateZ() const { return _params.sensor.apertureRotate; }
+    void               setWindowRotateZ(double angleInDegrees) { _params.sensor.apertureRotate = angleInDegrees; }
 
     //-----------------------------------------------------------------
 

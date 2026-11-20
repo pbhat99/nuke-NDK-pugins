@@ -29,7 +29,7 @@ namespace usg {
     std::string errorMessage() const;
 
     //! Executes the expression for the given root prim and returns a result set
-    PathArray match(const StageRef& stage, const Prim::FlagsPredicate& predicate = Prim::DefaultPredicate) const;
+    PathArray match(const StageRef& stage) const;
 
     //! A class for doing batch matching of individual paths
     class USG_API Matcher {

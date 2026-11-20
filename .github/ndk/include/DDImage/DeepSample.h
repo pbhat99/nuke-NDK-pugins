@@ -4,7 +4,6 @@
 #define DDImage_DeepSample_H
 
 #include "DDImage/ChannelMap.h"
-#include "DDImage/ChannelPack.h"
 #include "DDImage/DeepPixel.h"
 
 #include <vector>
@@ -62,7 +61,7 @@ namespace DD {
         _samples = other._samples;
       }
 
-      bool operator==(DeepSample& other) const
+      bool operator==(DeepSample& other)
       {
         return (_map == other._map) && (_samples.size() == other._samples.size()) &&
                (std::equal(_samples.begin(), _samples.end(), other._samples.begin()));
@@ -92,7 +91,7 @@ namespace DD {
       }
 
       /// get number of samples
-      size_t size() const
+      size_t size()
       {
         return _samples.size();
       }
@@ -118,11 +117,6 @@ namespace DD {
       {
       }
 
-      /// Initialise based on a ChannelPack. Set all samples to zero.
-      DeepLightSample(const ChannelPack& pack) : _samples(pack.size(), 0)
-      {
-      }
-
       /// Initialise based on a sample from a DeepPixel. If fetchOrdered is true it will use
       /// getOrderedSample, otherwise getUnorderedSample.
       DeepLightSample(const ChannelMap& map, const DeepPixel& pixel, int sample, bool fetchOrdered = false)
@@ -130,56 +124,19 @@ namespace DD {
         _samples.reserve(map.size());
         const ChannelSet& chans = map;
 
-        for (auto z : chans) {
+        foreach(z, chans) {
           if (pixel.channels().contains(z)) {
             _samples.push_back(
               fetchOrdered ? pixel.getOrderedSample(sample, z)
                            : pixel.getUnorderedSample(sample, z)
             );
           }
-          else {
+          else
             _samples.push_back(0);
-          }
         }
       }
 
-      /// Initialise based on a sample from a DeepPixel. If fetchOrdered is true it will use
-      /// getOrderedSample, otherwise getUnorderedSample.
-      DeepLightSample(const ChannelPack& pack, const DeepPixel& pixel, int sample, bool fetchOrdered = false)
-      {
-        _samples.reserve(pack.size());
-
-        for (auto z : pack) {
-          if (pixel.channels().contains(z)) {
-            _samples.push_back(
-              fetchOrdered ? pixel.getOrderedSample(sample, z)
-                           : pixel.getUnorderedSample(sample, z)
-            );
-          }
-          else {
-            _samples.push_back(0);
-          }
-        }
-      }
-
-      /// Copy the specified samples from a DeepPixel.
-      /// If fetchOrdered is true it will use getOrderedSample, otherwise getUnorderedSample.
-      void copyDeepSample(const ChannelPack& pack, const DeepPixel& pixel, int sample, bool fetchOrdered = false)
-      {
-        _samples.resize(pack.size());
-        size_t i = 0;
-        for (auto z : pack) {
-          if (pixel.channels().contains(z)) {
-            _samples[i] = fetchOrdered ? pixel.getOrderedSample(sample, z) : pixel.getUnorderedSample(sample, z);
-          }
-          else {
-            _samples[i] = 0;
-          }
-          ++i;
-        }
-      }
-
-      bool operator==(DeepLightSample& other) const
+      bool operator==(DeepLightSample& other)
       {
         return _samples == other._samples;
       }
@@ -217,7 +174,7 @@ namespace DD {
       }
 
       /// get number of samples
-      size_t size() const
+      size_t size()
       {
         return _samples.size();
       }

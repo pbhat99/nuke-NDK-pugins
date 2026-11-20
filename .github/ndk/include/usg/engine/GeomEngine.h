@@ -434,14 +434,6 @@ namespace usg {
     //! Sets the created paths list for this engine.
     void setCreatedPaths(const usg::PathArray& lastModified);
 
-    //! Returns a possible path to be used as the default parent prim for downstream engines
-    const usg::Path& getDefaultParentPath() const;
-
-    //! Sets the default parent path
-    void setDefaultParentPath(const usg::Path& path);
-
-    //! Host application has requested that the engine should abort its processing
-    virtual bool aborted() const;
 
     //----------------------------------------------------------------------
 
@@ -453,8 +445,6 @@ namespace usg {
     //! Returns the input stage for \a input. This does not bring the stage up to date; use buildStageFromInput to evaluate the stage.
     const usg::StageRef inputStage(int input) const;
 
-    //! Returns the layer on the output stage that corresponds to the edit layer at the last evaluation
-    usg::LayerRef outputStageLayer();
 
     /*! Return the companion arbitrary output data for this engine.
         Base class returns the local \a _sceneOutputData var.
@@ -466,11 +456,6 @@ namespace usg {
     static GeomEngine* ExecutingEngine();
     //! Sets the currently executing GeomEngine, returning the previous one. This should only be used for error reporting.
     static GeomEngine* SetExecutingEngine(GeomEngine* engine);
-
-    /*! Unwind the stage for the engine called before processScenegraph()
-        is called.
-    */
-    virtual void unwindStage(const GeomSceneContext& /*context*/) {}
 
     //----------------------------------------------------------------------
 

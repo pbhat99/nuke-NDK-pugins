@@ -5,12 +5,10 @@
 
 #include "DDImage/DDImage_API.h"
 #include "DDImage/KnobChangedObserverI.h"
-#include "DDImage/Hash.h"
-#include "DDImage/GeneralInfo.h"
-#include "DDImage/OutputContext.h"
 
-#include "ndk/graph/GsvTypes.h"
-#include "fdk/base/Time.h"
+#include "DDImage/Hash.h"
+#include "DDImage/OutputContext.h"
+#include "DDImage/GsvSet.h"
 
 #include <vector>
 #include <string>
@@ -22,11 +20,8 @@ namespace DD
 {
   namespace Image
   {
-    using GsvSets = ndk::GsvSets;
     class LinkableI;
     class GsvKnobI;
-    class Description;
-    class Op;
 
 
     class DDImage_API NodeI
@@ -91,9 +86,6 @@ namespace DD
       //! as the trailing '.parent' is an expression.
       static NodeI* GetNodeAtPath(const std::string& nodePath, int32_t instanceIndex = -1);
 
-      //! Convert an abstract Node* to a node interface.
-      static NodeI* GetInterface(Node*);
-
       //-----------------------------------------------------------------------------------
 
       //! Return the parent node. If this is non-null the returned node will always be a Group.
@@ -106,21 +98,6 @@ namespace DD
           indicate when those names are changed.
       */
       virtual Hash topologyHash() = 0;
-
-      //! Node's global edit version state hash, formed from the input and local knob edit
-      //! version hashes, and the Node name(plus clone info.) This state hash should only
-      //! change when the contents of a Knob is changed (i.e. edited) or the Node graph
-      //! topology is changed (i.e. input connections edited) since the combination of input
-      //! knobs will change.
-      //!
-      //! Op::treeVersion() provides a similar global change notification except that it is
-      //! global to -all- of Nuke, so Node::editVersionHash() allows the individual Node
-      //! global edit version state to be tracked.
-      //!
-      //! Note - since editVersionHash is built from Knob editVersion integers which are
-      //! incremented when Knob contents are edited, the editVersionHash() should never
-      //! repeat even when Knobs are set back to a previously used value.
-      virtual Hash editVersionHash() = 0;
 
       //! Return whether we are currently in node creation or not
       virtual bool creatingNewNode() const { return false; }
@@ -155,28 +132,19 @@ namespace DD
 
       //-----------------------------------------------------------------------------------
 
-      //! Return the name from the Node_Description that created this Node. Note that this name may
-      //! -not- be the same as the Node Class() which is usually the script command name. Some Nodes
-      //! are not created by a script command or Op class name, so this method provides the creator
-      //! name for those Node types.
-      virtual const char* nodeDescriptionName() const = 0;
-
-      //! Returns the base class name for the Node if it manages Ops, usually 'OpNode'.
-      virtual const char* opManagerClass() const = 0;
-
       //! A single Node can create many Op instances however the first one it creates is special as it
       //! is never deleted until the Node is. See Op::firstOp() for more info.
       virtual Op* firstOp() const = 0;
 
       //! Return a specific Op owned by this Node, uniquely identified by its OutputContext.
-      virtual Op* findOp(const OutputContext& context) const { return nullptr; }
+      virtual Op* findOp(const DD::Image::OutputContext& context) const { return nullptr; }
 
       /*! Return the Op hash of a Node at a specific OutputContext if the Node contains one, otherwise
           a default Hash is returned.
           Note that just because the Node contains an Op with that hash does not mean the Op is useable,
           always check the Op is valid and constructed.
       */
-      virtual Hash findOpHash(const OutputContext& context) const { return Hash(); }
+      virtual Hash findOpHash(const DD::Image::OutputContext& context) const { return Hash(); }
 
       /*! Retrieve an Op owned by the Node with a matching hash, or null if none found.
           You must check that the returned Op is useable, valid and constructed.
@@ -185,23 +153,6 @@ namespace DD
 
       //! Get the hashes of all Ops owned by this Node.
       virtual std::vector<DD::Image::Hash> opHashes() const { return std::vector<DD::Image::Hash>(); }
-
-      //-----------------------------------------------------------------------------------
-
-      //! Calculate a frame range for the given OutputContext.
-      //! Implemented by Nodes that want to modify the frame range flowing down the graph.
-      virtual void getFrameRangeAt(const OutputContext& context, FrameRange& frameRangeOut) const = 0;
-
-      //! Calculate the input frame for the given OutputContext.
-      //! Implemented by Nodes that want to modify the time flowing down the graph.
-      //! If Node is not changing anything returns the frame in \a context.
-      virtual double getInputFrameAt(const DD::Image::OutputContext& context) const = 0;
-
-      //! Apply Node out->in time remapping function, if any, otherwise outTimes are copied to inTimes.
-      void applyTimeRemapping(const fdk::TimeValueSet& outTimes, const OutputContext& baseContext, fdk::TimeValueSet& inTimes) const;
-
-      //! Same but with a time list source.
-      void applyTimeRemapping(const fdk::TimeValueList& outTimes, const OutputContext& baseContext, fdk::TimeValueSet& inTimes) const;
 
       //-----------------------------------------------------------------------------------
 

@@ -88,12 +88,7 @@ namespace usg
         the option was specified with a value).
         Commonly used for enumeration types.
     */
-    std::vector<std::pair<std::string, std::string>> getOptions() const;
-
-    //! Returns metadata with nested dictionary values preserved where available.
-    ValueDictionaryRef getMetadataObject() const;
-
-    std::string getImplementationName() const;
+    fdk::StringList  getOptions() const;
 
 
   public:

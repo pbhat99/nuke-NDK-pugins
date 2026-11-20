@@ -12,15 +12,6 @@ namespace slr
 
   //-----------------------------------------------------------------------------
 
-  //! Access these tokens like so: 'slr::PrimTokens.visibleToCamera'.
-  //!
-  struct DDImage_API PrimTokensDef {
-    usg::Token::Lazy  visibleToCamera{"slr:visibleToCamera"}; // Value::Bool
-  };
-  extern DDImage_API PrimTokensDef PrimTokens;
-
-  //-----------------------------------------------------------------------------
-
 
   /*! \class DD::Image::SlrSurfaceShader
 
@@ -30,18 +21,17 @@ namespace slr
       feeding the surface shader.
   */
   class DDImage_API SlrSurfaceShader : public SlrShader
-                                     , public SlrShaderCutoutControlsI
   {
   public:
     //! Intersection testing sides mode
     //! TODO ndk16: this enum is duplicated on SurfaceShaderOp! We need 'common' shader
     //!             include headers that let us share these definitions since the schemas
     //!             also need the same values.
-    enum SideVisibilityMode
+    enum SidesMode
     {
-      SIDE_VISIBILITY_BOTH,
-      SIDE_VISIBILITY_FRONT,
-      SIDE_VISIBILITY_BACK
+      SIDES_BOTH,
+      SIDES_FRONT,
+      SIDES_BACK
     };
 
     //! What 'kind' of surface is this and how does it react optically to light? While Slr2 is
@@ -73,7 +63,7 @@ namespace slr
     //!
 
     //! Surface visibility mask type used for ray type testing.
-    using VisibilityTraits = SlrRayContext::TypeMask;
+    using VisibilityTraits = ndk::RayContext::TypeMask;
 
   public:
     //!
@@ -153,9 +143,6 @@ namespace slr
         a shader can override, but note these are only the traits derived from the shader controls
         which can be shared between multiple objects.
 
-        If the shader has a valid input on baseInputIndex() the opacity traits from that input
-        are automatically copied and the local shader traits applied as overrides.
-
         For a surface shader to take into account individual geometry primvars which may affect
         opacity for that particular surface (for example using 'primvars:displayOpacity') the
         shader should implement getOpacityTraitsForRenderable() for any custom opacity handling.
@@ -172,10 +159,22 @@ namespace slr
         Per-renderable opacity traits that may require primvar values is retrievable via
         getOpacityTraitsForRenderable().
     */
-    virtual ndk::OpacityTraitsMask  getGlobalOpacityTraits() const;
+    virtual ndk::OpacityTraitsMask  getGlobalOpacityTraits() const { return getCommonSurfaceOpacityTraits(false, false); }
+
+    /*! Return the opacity traits for the renderable influenced by this shader. This
+        method will be called for each renderable Gprim this shader is assigned to.
+
+        By default this returns the shader's global opacity traits, ignoring any
+        renderable specific attributes.
+
+        However if the shader requires renderable specific primvar values to determine
+        opacity then it can call SlrEngineContext::gprimProvidesPrimvar() to find if a
+        primvar is available for that renderable and its surface interpolation type.
+    */
+    virtual ndk::OpacityTraitsMask  getRenderableOpacityTraits(const SlrPrimInfo& primInfo) const;
 
     /*! Return the opacity traits set by the CommonSurfaceProperties parameters, taking
-        into account the optional opacity trait override argument. These overrides are
+        into account the optional varying opacity and presence arguments. These options are
         usually provided on a per-renderable basis so that primvars affecting the opacity
         traits can be considered.
 
@@ -183,23 +182,9 @@ namespace slr
         SlrSurfaceShader class, so a subclass is free to use the default behavior or can
         implement this method to change the behavior.
     */
-    virtual ndk::OpacityTraitsMask  getCommonSurfaceOpacityTraits(const ndk::OpacityTraitsMask opacityTraitOverrides = 0x0) const;
+    virtual ndk::OpacityTraitsMask  getCommonSurfaceOpacityTraits(bool opacityValueVaries = false,
+                                                                  bool presenceValueVaries = false) const;
 
-    /*! Return the opacity traits for the renderable influenced by this surface shader.
-        This method will be called for each renderable Gprim this shader is assigned to.
-
-        By default this returns the shader's global opacity traits, ignoring any
-        renderable specific attributes.
-    */
-    ndk::OpacityTraitsMask  getRenderableOpacityTraits(const SlrPrimInfo& primInfo) const override;
-
-    //! Shader turns on cutout mode, which is passed down to the surface shader and
-    //! applied by the integrator.
-    bool  cutoutModeEnabled() const override;
-
-    //! Shader turns on cutout data aovs mode, which is passed down to the surface shader
-    //! and applied by the integrator.
-    bool  cutoutModeRemovesDataAovsEnabled() const override;
 
 
     //--------------------------------------
@@ -215,7 +200,7 @@ namespace slr
         Called from SlrSurfaceShader::_validateShader() to fill in _globalVisibilityTraits.
 
         A surface with no visibility restrictions should return VisibilityTraits() by
-        default (SIDE_VISIBILITY_BOTH and all ray types visible,) or if using CommonSurfaceProperties
+        default (SIDES_BOTH and all ray types visible,) or if using CommonSurfaceProperties
         parameters then return getCommonSurfaceVisibilityTraits().
 
         Default returns getCommonSurfaceVisibilityTraits().
@@ -237,11 +222,11 @@ namespace slr
 
     //--------------------------------------
 
-    const DD::Image::Channel&    opacityChannel() const { return _opacityChannel; }
-    const DD::Image::ChannelSet& opacityChannelSet() const { return _opacityChannelSet; }
+    DD::Image::Channel           opacityChannel() const { return _opacityChannel; }
+    const DD::Image::ChannelSet  opacityChannelSet() const { return _opacityChannelSet; }
 
-    const DD::Image::Channel&    presenceChannel() const { return _presenceChannel; }
-    const DD::Image::ChannelSet& presenceChannelSet() const { return _presenceChannelSet; }
+    DD::Image::Channel           presenceChannel() const { return _presenceChannel; }
+    const DD::Image::ChannelSet  presenceChannelSet() const { return _presenceChannelSet; }
 
     float  opacityFactor() const { return _opacityFactorClamped; }
     float  opacityPresenceThreshold() const { return _opacityPresenceThresholdClamped; }
@@ -332,45 +317,39 @@ namespace slr
     */
     virtual fdk::Vec3f  surfaceOpacity(const SlrShadingContext& stx) { return fdk::Vec3f(1.0f); }
 
-    /*! Copy the results from the surfaceShader() method to the \a layeredOut fragment output
-        with no blending. stx.shadedOutput() contains the shaded result from surfaceShader().
+    /*! Combine the results from the surfaceShader() method with the current value of the
+        fragment output. The stx.blendingOrder() indicates whether \a fragment_out is being
+        being built in back-to-front or front-to-back Z order. This order can be changed by
+        an integrator on every sample depending on the number and type of hits.
 
-        Default implementation copies the aov/primars then copies the outputChannels and
-        coverage to \a layeredOut.
+        Front-to-back order (stx.blendingOrderFrontToBack() == true) is typically only used for
+        'standard' alpha blending, while back-to-front (stx.blendingOrderBackToFront() == true)
+        can do arbitrary operations since the \a shaded_surface channels always overlay the
+        previous \a fragment_out's value. Back to front is more expensive unless the integrator
+        knows that the first surface is trivially-opaque and can skip all other surfaces, and in
+        that case it can disable the blending order to (stx.blendingOrderDisabled() == true) and
+        avoid calling blendSurface() altogether.
+
+        Color channels in \a shaded_surface should be pre-multiplied at this point by the surface
+        presence weight, usually handled by the integrator. \a shaded_surface.coverage() can be
+        combined like a matte channel using an over or under depending on blending order.
+
+        Default implementation does either an over or under of all color channels and coverage
+        depending on stx.blendingOrder().
     */
-    virtual void   copySurface(const SlrShadingContext& stx, DD::Image::Pixel& layeredOut);
-
-    /*! Combine the results from the surfaceShader() method with the current accumulated value
-        of the layered fragment output \a layeredAccum. stx.shadedOutput() contains the
-        shaded result from surfaceShader().
-
-        'Under' blending is only used for standard front-to-back alpha blending and cannot do
-        most special merging operations. An advantage of front to back blending is that it can
-        end early when the accumulated opacity reaches 1.0. Back-to-front blending cannot end
-        early since the final result must include the frontmost surface. Thus front to back is
-        potentially faster but is limited in its compositing operations.
-
-        Color channels in \a shadedSurface should be pre-multiplied at this point by the surface
-        presence weight, usually handled by the shading context. \a shadedSurface.coverage() can
-        be combined like a matte channel using an under.
-
-        Default implementation does an under of all color channels and coverage.
-    */
-    virtual void   blendSurfaceFrontToBack(DD::Image::Pixel& layeredAccum, const SlrShadingContext& stx);
-
-    //! Same but for 'Over' back-to-front layering order supporting all compositing operations.
-    //! \a shadedSurface.coverage() can be combined like a matte channel using an over.
-    virtual void   blendSurfaceBackToFront(const SlrShadingContext& stx, DD::Image::Pixel& layeredOut);
+    virtual void   blendSurface(const SlrShadingContext& stx,
+                                const DD::Image::Pixel&  shaded_surface,
+                                DD::Image::Pixel&        fragment_out);
 
 
   protected:
     // Uniform InputKnobs:
-    int32_t _sideVisibilityMode;      //!< Which side is visible?
-    bool    _cameraVisibility;        //!< Is this surface visible to camera rays?
-    bool    _shadowVisibility;        //!< Is this surface visible to shadow rays?
-    bool    _specularVisibility;      //!< Is this surface visible to specular rays?
-    bool    _diffuseVisibility;       //!< Is this surface visible to diffuse rays?
-    bool    _transmissionVisibility;  //!< Is this surface visible to transmitted rays?
+    int32_t _sidesMode;
+    bool    _cameraVisibility;
+    bool    _shadowVisibility;
+    bool    _specularVisibility;
+    bool    _diffuseVisibility;
+    bool    _transmissionVisibility;
     int32_t _transmissionPriority;    //!< Typically used for dielectric priority parameter
     // Uniform InputKnobs:
     FloatBinding          _opacityFactor;
@@ -386,17 +365,14 @@ namespace slr
     Dual2Chans  _CfPrimvarChans;    //!< Start indices of color primvar(s) in shader channelset
     Dual2Chans  _CoPrimvarChans;    //!< Start indices of opacity primvar(s) in shader channelset
 
-    DD::Image::ChannelSet  _blendingColorChannelSet;  //!< Set of channels to apply blending function to
-    DD::Image::ChannelPack _blendingColorChannelPack; //!< Automatically built from _blendingColorChannels
-
   private:
     //! Disabled copy constructor.
     SlrSurfaceShader(const SlrSurfaceShader&) = delete;
     //! Disabled assignment operator.
     SlrSurfaceShader& operator = (const SlrSurfaceShader&) = delete;
 
-    VisibilityTraits       _globalVisibilityTraits;           //!< Global traits derived from knobs
     ndk::OpacityTraitsMask _globalOpacityTraits;              //!< Global traits derived from knobs
+    VisibilityTraits       _globalVisibilityTraits;           //!< Global traits derived from knobs
     float                  _opacityFactorClamped;             //!< Clamped version of _opacityFactor
     float                  _opacityPresenceThresholdClamped;  //!< Clamped version of _opacityPresenceThreshold
   };
@@ -476,19 +452,23 @@ namespace slr
     //! commonSurfaceBlendOpFunc().
     virtual BlendOpFunc  getBlendOpFunc() const = 0;
 
-    //! Updates states from the blend knobs.
-    void  updateProperties(const usg::ShaderDesc& shader_desc) override;
-
     //!
     void  _validateShader() override;
 
+    //! Updates states from the blend knobs.
+    void  updateProperties(const usg::ShaderDesc& shader_desc) override;
+
     //! Return the opacity traits set by the CommonSurfaceProperties parameters.
     //!
-    //! SlrBlendingSurfaceShader adds tests for whether blend mode can blend to opaque.
-    ndk::OpacityTraitsMask  getCommonSurfaceOpacityTraits(const ndk::OpacityTraitsMask opacityTraitOverrides = 0x0) const override;
+    //! SlrBlendingSurfaceShader adds tests for whether blend mode can blend to
+    //! opaque.
+    ndk::OpacityTraitsMask  getCommonSurfaceOpacityTraits(bool opacityValueVaries = false,
+                                                          bool presenceValueVaries = false) const override;
 
     //!
-    void  blendSurfaceBackToFront(const SlrShadingContext& stx, DD::Image::Pixel& layeredOut) override;
+    void  blendSurface(const SlrShadingContext& stx,
+                       const DD::Image::Pixel&  shaded_surface,
+                       DD::Image::Pixel&        fragment_out) override;
 
 
   protected:
@@ -648,9 +628,6 @@ namespace slr
     //!
     const ShadingLayerReqSet&  writableShadingLayers() const;
 
-    //! Global opacity traits from the surface shader (may apply to all prims).
-    ndk::OpacityTraitsMask  globalOpacityTraits() const;
-
     //! Opacity traits from the surface shader for a renderable.
     ndk::OpacityTraitsMask  getRenderableOpacityTraits(const SlrPrimInfo& primInfo) const;
 
@@ -668,11 +645,8 @@ namespace slr
     //! Calls requestResources() on the set of input shaders.
     void   requestResources(const DD::Image::ChannelSet& request_channels);
 
-    //! Calls initializeForShadingThread() on the set of input shaders.
-    void   initializeForShadingThread(SlrThreadContext& sttx);
-
-    //! Calls cleanupAfterShading() on the set of input shaders.
-    void   cleanupAfterShading();
+    //! Calls initializeForShading() on the set of input shaders.
+    void   initializeForShading(uint32_t num_shading_threads);
 
     //!
     float  displacementBound();

@@ -9,9 +9,7 @@
 #define FN_SHARED_EXPORT __declspec(dllexport)
 #endif
 
-#ifndef mFnSharedObjectExport
-#define mFnSharedObjectExport FN_SHARED_EXPORT
-#endif
+#define mFnSharedObjectExport FN_SHARED_EXPORT 
 
 #ifndef FN_SHARED_IMPORT
 #define FN_SHARED_IMPORT __declspec(dllimport)

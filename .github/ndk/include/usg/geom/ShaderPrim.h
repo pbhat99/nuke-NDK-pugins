@@ -60,9 +60,6 @@ namespace usg
     //! Get the value of the 'info:id' attribute, if there is one.
     usg::Token   getIdentifier() const;
 
-    //! Get the value of the `info:id` attribute, if the shader's info:implementationSource is id.
-    bool         getShaderId(usg::Token& info_id) const;
-
     //-------------------------------
 
     /*! Assign/override the 'info:implementationSource' attribute, returning true on

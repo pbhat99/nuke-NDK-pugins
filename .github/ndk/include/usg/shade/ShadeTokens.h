@@ -31,12 +31,6 @@ namespace usg {
         Token::Lazy NodeGraph{ "NodeGraph" };
         Token::Lazy Shader{ "Shader" };
       } types;
-
-      struct {
-        Token::Lazy allPurpose{ "" };
-        Token::Lazy full{ "full" };
-        Token::Lazy preview{ "preview" };
-      } purposes;
     };
       // --(BEGIN CUSTOM CODE)--
       struct USG_API MaterialAPITokensDef {

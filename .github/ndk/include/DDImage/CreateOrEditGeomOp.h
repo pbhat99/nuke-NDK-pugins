@@ -23,20 +23,14 @@ namespace DD
         Edit,
       };
 
-      CreateOrEditGeomOp(Node* node, GeomOpEngineBuilder builder,
-        Mode defaultMode = Mode::Create,
+      CreateOrEditGeomOp(Node* node, GeomOpEngine::Builder builder,
         const std::string& primPath = "{nodename}",
-        const std::string& createParentsKnobNamePrefix = "",
-        std::string_view editFilterMask = "{default}", 
-        std::string_view editMaskKnobName = "mask_patterns");
+        const std::string& createParentsKnobNamePrefix = "");
 
       void knobs(DD::Image::Knob_Callback f) override;
       int knob_changed(Knob* k) override;
 
       const char* modeKnobName() const;
-
-      virtual void addDisplayOptionsKnobs(DD::Image::Knob_Callback);
-      bool selectable() const override;
 
       const usg::PathArray& filteredPrims() const;
 
@@ -44,7 +38,7 @@ namespace DD
       {
       public:
         //! If filter is not nullptr it will be called to narrow the set of filtered prims
-        Engine(GeomOpNode* parent, FilterPrimsGeomEngineI* filter = nullptr)
+        Engine(Op* parent, FilterPrimsGeomEngineI* filter = nullptr)
         : GeomOpEngine(parent)
         , _modifySubEngine(this, filter)
         {
@@ -52,11 +46,6 @@ namespace DD
 
         //! Get current set of prims to create or edit.
         const usg::PathArray& filteredPrims() const;
-
-        //! Returns true if filteredPrims updated.
-        //! Applies additional filtering if constructor was passed a filter object.
-        bool updateFilteredPrimPaths(usg::GeomEngine* inputEngine,
-          const usg::StageRef& inputStage);
         
       protected:
         ModifyPathsGeomOpI::SubEngine _modifySubEngine;
@@ -74,7 +63,6 @@ namespace DD
 
     protected:
       int _mode = static_cast<int>(Mode::Create);
-      bool _selectable = true;
     };
   }
 }

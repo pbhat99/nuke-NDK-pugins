@@ -10,12 +10,14 @@
 #include "usg/geom/GeomTokens.h"
 
 namespace ndk {
-  
-  using GLuint = unsigned int;
 
   //! Mesh topology
   struct NDK_API MeshTopology
   {
+    usg::Vec3fArray  points;            //!< Local-space point locations
+    usg::Int32Array  faceVertexCounts;    //!< Per-face vert count (not all_tris or all_quads)
+    usg::Int32Array  faceVertexIndices;    //!< Per facevert point location indices
+
   private:
     //! An iterator over the faces of a mesh
     class FaceIterator {
@@ -167,26 +169,26 @@ namespace ndk {
     };
 
   public:
-
-    //! The type of topology of the mesh (e.g. all tris, all quads, non-uniform)
-    enum class TopologyType {
-      NotSet,
-      AllTris,
-      AllQuads,
-      NonUniform
-    };
-
     //! Constructs the topology of the mesh at \a time.
-    MeshTopology(const usg::MeshPrim& prim, const fdk::TimeValue& time);
+    MeshTopology(const usg::MeshPrim& prim, const fdk::TimeValue& time)
+    {
+      prim.getAttr(usg::GeomTokens.points).getValue(points, time);
+      if (points.empty()) {
+        return;
+      }
 
-    //! Destructor
-    ~MeshTopology();
+      prim.getAttr(usg::GeomTokens.faceVertexCounts).getValue(faceVertexCounts, time);
+      if (faceVertexCounts.empty()) {
+        return;
+      }
 
-    //! Default constructor
+      prim.getAttr(usg::GeomTokens.faceVertexIndices).getValue(faceVertexIndices, time);
+      if (faceVertexIndices.empty()) {
+        return;
+      }
+    }
+
     MeshTopology() = default;
-
-    //! Move constructor
-    MeshTopology(MeshTopology&& other) noexcept;
 
     //! Return an object which can be iterated to retrieve all faces of the mesh
     //! e.g. for (auto&& it : sample.faces()) { ... }
@@ -196,46 +198,6 @@ namespace ndk {
     //! will be returned twice, once for each face in each direction.
     //! e.g. for (auto&& it : sample.edges()) { ... }
     const Edges edges() const { return Edges(*this); }
-
-    //! Determine and store the topology type based on the face vertex counts.
-    void storeTopologyType();
-
-    //! Create OpenGL buffers for rendering the mesh if the topology is all tris or all quads.
-    void createGLBuffers();
-
-    //! Clear any OpenGL buffers that were created for rendering.
-    void clearGLBuffers();
-
-    //! Triangulate the mesh topology if it is non-uniform, producing new face vertex indices and counts.
-    //! The new arrays are returned via the output parameters.
-    bool triangulate(
-      usg::Int32Array& newFaceVertexIndices,
-      usg::Int32Array& newFaceVertexCounts);
-
-    //! Get the VBO of the topology for rendering
-    GLuint getVBO() const { return _vbo; }
-
-    //! Get the EBO of the topology for rendering
-    GLuint getEBO() const { return _ebo; }
-
-    //! Get the topology type
-    TopologyType getTopologyType() const { return _topologyType; }
-
-    //! Get the topology type on the GPU.
-    TopologyType getTopologyTypeGPU() const { return _topologyTypeGPU; }
-
-    //! Get the total face count on the GPU.
-    unsigned getTotalFaceCountGPU() const { return _totalFaceCountGPU; }
-
-    usg::Vec3fArray  points;              //!< Local-space point locations
-    usg::Int32Array  faceVertexCounts;    //!< Per-face vert count (not all_tris or all_quads)
-    usg::Int32Array  faceVertexIndices;   //!< Per facevert point location indices
-
-  private:
-    TopologyType     _topologyType = TopologyType::NotSet;    //!< The type of topology
-    TopologyType     _topologyTypeGPU = TopologyType::NotSet; //!< The type of topology on the GPU (after triangulation if needed)
-    unsigned         _totalFaceCountGPU = 0;                  //!< Total number of faces on the GPU (after triangulation if needed)
-    GLuint           _vbo = -1, _ebo = -1;                     //!< OpenGL buffers for rendering (if needed)
   };
 
 }

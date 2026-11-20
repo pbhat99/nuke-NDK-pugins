@@ -8,8 +8,6 @@
 #include "DDImage/Reader.h"
 
 #include <unordered_map>
-#include <string>
-#include <variant>
 
 #define USE_DEPRECATED_READ_GEO_CTOR 1
 
@@ -21,8 +19,7 @@ namespace DD
 class ReadGeo;
 class GeoReader;
 class Description;
-class FileReaderFormat;
-using GeoReaderFormat = FileReaderFormat;
+class GeoReaderFormat;
 
 /*! 
     This structure describes a subclass of GeoReader. The constructor
@@ -51,24 +48,13 @@ using GeoReaderFormat = FileReaderFormat;
 class DDImage_API GeoDescription : public DD::Image::ReaderDescription
 {
 public:
-  /*! Filename tester: returns true if the reader claims the file */
   typedef bool (* FilenameTester)(const std::string& filename);
-
-  /*! Extended filename tester: returns true if the reader claims the file. If returning false it
-   *  may populate 'errorOut' with a human readable reason which may be surfaced to the user when
-   *  an explicit type was requested or no reader matched. */
-  typedef bool (* FilenameTesterExt)(const std::string& filename, std::string& errorOut);
-
-  /*! Type alias for the variant containing different filename tester types. */
-  typedef std::variant<std::monostate, FilenameTester, FilenameTesterExt> FilenameTesterVariant;
-
 private:
   static void add(DD::Image::Description*);
   static void addFilenameTester(const DD::Image::GeoDescription*, FilenameTester);
-  static void addFilenameTester(const DD::Image::GeoDescription*, FilenameTesterExt);
 
   /*! A map of descriptions to their filename tester functions. */
-  static std::unordered_map<const DD::Image::GeoDescription*, FilenameTesterVariant> _descriptionTesters;
+  static std::unordered_map<const DD::Image::GeoDescription*, FilenameTester> _descriptionTesters;
 public:
   typedef GeoReader* (*Constructor)(ReadGeo *, int fd, const unsigned char* buf, int bufsize);
   typedef bool (* Tester)(int fd, const unsigned char* buf, int bufsize);
@@ -86,7 +72,7 @@ public:
      error messages and filename() does not work yet). */
   Constructor _constructor;
 
-  typedef FileReaderFormat* (*GeoReaderFormatConstructor)(ReadGeo*);
+  typedef GeoReaderFormat* (*GeoReaderFormatConstructor)(ReadGeo*);
 
   GeoReaderFormatConstructor _format_constructor;
 
@@ -174,30 +160,6 @@ public:
     addFilenameTester(this, ft);
   }
 
-  /*! This constructor takes a FilenameTesterExt parameter.
-   * FilenameTesterExt is a function pointer to test a file's
-   * compatibility with the reader using the given filename.
-   * If the test fails, it can provide a human-readable error message.
-   * This is an alternative to using GeoDescription::Tester which
-   * requires a file descriptor.
-  */
-  GeoDescription(const char* n,
-                 Constructor c,
-                 GeoReaderFormatConstructor fmtConstructor,
-                 FilenameTesterExt ft,
-                 License * f = nullptr,
-                 bool needFd = true)
-    : ReaderDescription(n, n)
-    , _constructor(c)
-    , _format_constructor(fmtConstructor)
-    , _test(nullptr)
-    , _needFd(needFd)
-  {
-    license = f;
-    ctor(add);
-    addFilenameTester(this, ft);
-  }
-
   /*! Return the i'th GeoDescription known about, or return a null pointer
    * for the last one.
    */
@@ -209,16 +171,9 @@ public:
   static const GeoDescription* find(const char* name);
 
   /*! Search all the defined FilenameTesters for one which is
-   * related to the passed /p desc, or return null variant if none.
-   * Returns a variant containing either FilenameTester or FilenameTesterExt.
+   * related to the passed /p desc, or return null pointer if none.
    */
-  static FilenameTesterVariant findFilenameTester(const GeoDescription* desc);
-
-  /*! Helper function to test a filename using a FilenameTesterVariant.
-   * Returns true if the tester accepts the file, false otherwise.
-   * If the tester is FilenameTesterExt and returns false, errorOut will contain the error message.
-   */
-  static bool testFilename(const FilenameTesterVariant& tester, const std::string& filename, std::string& errorOut);
+  static FilenameTester findFilenameTester(const GeoDescription* desc);
 };
 
 

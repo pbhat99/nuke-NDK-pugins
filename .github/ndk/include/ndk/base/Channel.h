@@ -5,7 +5,6 @@
 
 #include "ndk/api.h"
 
-#include <cstdint>
 #include <iostream>
 #include <limits>
 
@@ -35,8 +34,8 @@ namespace ndk {
     //!
     enum Type : int32_t
     {
-      AutoType = -1,  //!< Special value: Determine type from channel/layer name
-      NoType = 0,     //!< Generic value: ordering=unimportant, blendable=unknown, interpolatable=unknown
+      Auto = -1,      //!< Special value: Determine type from channel/layer name
+      None = 0,       //!< Generic value: ordering=unimportant, blendable=unknown, interpolatable=unknown
       //
       // -------- Blendable -------
       Blendable,      //!< Generic blendable layer: ordering=unimportant, blendable=yes, interpolatable=yes
@@ -134,44 +133,11 @@ namespace ndk {
     //! then Float2 will be returned.
     static int32_t      TypeCompoundValueType(Type type, int32_t sizeHint = 0);
 
-    //-------------------------------------------------------------------------
-
-    //! Channel::Interpretation is an additional hint to Type for the handling and/or usage of
-    //! a channel or layer.
-    //! For example a DataVec3 Type can store a vector, position or normal which may affect the
-    //! kinds of operations to be applied, such as a normal needing to multiplied by the inverse
-    //! transpose of a matrix vs. a position which can be directly multiplied by a 4x4 matrix,
-    //! vs. a vector which should only be rotated by a matrix.
-    enum Interpretation : int32_t
-    {
-      AutoInterp = -1,  //!< Special value: Determine type from channel/layer name
-      NoInterp = 0,     //!< Generic value: ordering=unimportant, blendable=unknown, interpolatable=unknown
-      //
-      ColorRGB,         //!< DataVec3 RGB color
-      ColorXYZ,         //!< DataVec3 XYZ color coordinate
-      ColorYxy,         //!< DataVec3 Yxy color coordinate
-      //
-      PositionXYZ,      //!< DataVec3 XYZ position coordinate
-      VectorXYZ,        //!< DataVec3 XYZ direction vector
-      NormalXYZ,        //!< DataVec3 XYZ normal direction vector
-      //
-      PositionXY,       //!< DataVec2 XY position coordinate
-      VectorXY,         //!< DataVec2 XY direction vector
-      //
-      ParametricUV,     //!< DataVec2 uv/st surface coordinate
-      ParametricUVW,    //!< DataVec3 uvw/stw surface coordinate (where W = depth coord)
-      TextureUV,        //!< DataVec2 uv/st texture coordinate
-      TextureUVW,       //!< DataVec3 uvw/stw texture coordinate (where W = perspective coord)
-    };
-
-    //! Human-readable string for Interpretation debugging. Note - not intended for parsing!
-    static const char*  InterpretationString(Interpretation interp);
-
 
   public:
     //! Default ctor intentionally leaves junk in _index for performance reasons.
     Channel() = default;
-    constexpr Channel(const Channel& b) : _index(b._index) {}
+    Channel(const Channel& b) : _index(b._index) {}
     constexpr Channel(int32_t i) : _index(i) {}
 
     explicit operator bool() const { return (_index > 0/*Chan_Empty*/); }

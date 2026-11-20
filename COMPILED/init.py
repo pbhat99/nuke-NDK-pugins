@@ -14,6 +14,7 @@ def _route_nuke_version():
     root_dir = os.path.dirname(os.path.abspath(__file__))
     major = nuke.NUKE_VERSION_MAJOR
     minor = nuke.NUKE_VERSION_MINOR
+    release = getattr(nuke, "NUKE_VERSION_RELEASE", 1)
 
     # Determine OS platform subfolder
     if sys.platform.startswith("win"):
@@ -26,6 +27,7 @@ def _route_nuke_version():
         platform_sub = None
 
     candidates = [
+        f"Nuke{major}.{minor}v{release}",
         f"Nuke{major}.{minor}",
         f"Nuke{major}",
     ]

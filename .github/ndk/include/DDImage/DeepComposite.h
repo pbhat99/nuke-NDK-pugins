@@ -52,29 +52,12 @@ namespace DD {
     //! @return DeepOutPixel with split volumes
     DDImage_API DeepOutPixel DeoverlapPixelSamples(const ChannelMap& channels, const DeepPixel& deepPixel);
 
-    //! Splits volumes that partially overlap - perfectly overlapping volumes aren't split
-    //! @param channels channels to de-overlap
-    //! @param deepPixel pixel to de-overlap
-    //! @param deepOutPixel the result DeepOutPixel with split volumes
-    //! @param samples temporary vector of DeepLightPixels used internally in DeoverlapPixelSamples.
-    //!                The same vector can be passed in to avoid reallocation when DeoverlapPixelSamples is called multiple times.
-    DDImage_API void DeoverlapPixelSamples(const ChannelMap& channels, const DeepPixel& deepPixel, DeepOutPixel& deepOutPixel, std::vector<DeepLightSample>& samples);
-
     //! Merge perfectly overlapping samples - where the Deep_Front and Deep_Back are the same for the sample per channel
     //! @param channels channels to merge together
     //! @param in_pixel the pixel to merge the samples in
     //! @param f the function to apply in the case of overlapping samples - for example, PlusOperation, MergeOperation
     //! @return DeepOutPixel with the samples merged according to the function provided
     DDImage_API DeepOutPixel MergeOverlappingPixelSamples(const DD::Image::ChannelSet& channels, const DeepPixel& in_pixel, CombineOperation f);
-
-    //! Merge perfectly overlapping samples - where the Deep_Front and Deep_Back are the same for the sample per channel
-    //! @param channels channels to merge together
-    //! @param in_pixel the pixel to merge the samples in
-    //! @param deepOutPixel the result DeepOutPixel with the samples merged according to the function provided
-    //! @param samples temporary vector of DeepLightPixels used internally in MergeOverlappingPixelSamples.
-    //!                The same vector can be passed in to avoid reallocation when MergeOverlappingPixelSamples is called multiple times.
-    //! @param f the function to apply in the case of overlapping samples - for example, PlusOperation, MergeOperation
-    DDImage_API void MergeOverlappingPixelSamples(const DD::Image::ChannelSet& channels, const DeepPixel& in_pixel,  DeepOutPixel& deepOutPixel, std::vector<DeepLightSample>& samples, CombineOperation f);
 
     //! Composite the samples together. Samples can be a DeepPixel or a DeepSampleVector.
     //! @param samples samples to composite

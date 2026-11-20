@@ -9,10 +9,10 @@
 
 #ifndef _FdkVersionNumber_h_
 #define _FdkVersionNumber_h_
-#define kFdkVersion "2.1.3"
-#define kFdkVersionInteger (10000 * 2 + 1000 * 1 + 3)
+#define kFdkVersion "2.1.1"
+#define kFdkVersionInteger (10000 * 2 + 1000 * 1 + 1)
 #define kFdkVersionMajorNum 2
 #define kFdkVersionMinorNum 1
-#define kFdkVersionPatchNum 3
+#define kFdkVersionPatchNum 1
 #define kFdk_ABI_version Fdk_ABI_2_1
 #endif

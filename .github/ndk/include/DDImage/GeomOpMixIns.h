@@ -21,16 +21,11 @@ namespace DD
     {
     public:
       TransformGeomOpI(const std::string& name = "transform");
-      TransformGeomOpI(const TransformKnobs::KnobParams& params);
 
-      int axisInput() const;
-
-      fdk::Mat4d handlesParentTransform(ViewerContext* ctx, const GeomOp* op, const std::string& primPath) const;
+      static fdk::Mat4d handlesParentTransform(ViewerContext* ctx, const GeomOp* op, const std::string& primPath);
 
       //! Sets up an axis knob in \a op.
       void knobs(Knob_Callback f, GeomOp* op);
-
-      const TransformKnobs* transformKnobs() const { return &_transformKnobs; }
 
       //! Implements the usg::GeomEngine transform behaviour
       //! In the GeomOp plugin's engine, instantiate this subclass
@@ -41,13 +36,11 @@ namespace DD
       public:
         SubEngine(GeomOpEngine* engine);
 
-        void apply(usg::GeomSceneContext& context, usg::XformablePrim& xform,
-          const std::string& opName = "local_axis");
+        void apply(usg::GeomSceneContext& context, usg::XformablePrim& xform);
 
       private:
         GeomOpEngine* _engine;
         usg::GeomStateTarget _modifyXformTarget;      //!< 'modify-xform' - affects the modify-values target
-        TransformKnobs* _transformKnobs{nullptr};
       };
 
     protected:
@@ -174,9 +167,7 @@ namespace DD
     class DDImage_API ModifyPathsGeomOpI
     {
     public:
-      ModifyPathsGeomOpI(std::string_view filterMask = "{default}", 
-                         std::string_view knobName = "mask_patterns",
-                         std::string_view injectKnobName= "inject_mask");
+      ModifyPathsGeomOpI(std::string_view filterMask = "/*", std::string_view knobName = "mask_patterns");
 
     protected:
       //! Implements the usg::GeomEngine path filtering behavior.
@@ -201,8 +192,6 @@ namespace DD
         FilterPrimsGeomEngineI* getFilter() const;
 
         const usg::PathArray& filteredPrims() const { return _filteredPrims; }
-
-        void updateDownstreamInjectedPaths();
 
       private:
         MaskKnobs* _maskKnobs{nullptr};

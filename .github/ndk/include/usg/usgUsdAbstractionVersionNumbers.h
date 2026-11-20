@@ -10,10 +10,10 @@
 #ifndef _usgUsdAbstractionVersionNumber_h_
 #define _usgUsdAbstractionVersionNumber_h_
 
-#define kFnUsdAbstractionVersion "0.9.0"
-#define kFnUsdAbstractionVersionInteger (10000 * 0 + 1000 * 9 + 0)
+#define kFnUsdAbstractionVersion "0.6.2"
+#define kFnUsdAbstractionVersionInteger (10000 * 0 + 1000 * 6 + 2)
 #define kFnUsdAbstractionVersionMajorNum 0
-#define kFnUsdAbstractionVersionMinorNum 9
-#define kFnUsdAbstractionVersionPatchNum 0
+#define kFnUsdAbstractionVersionMinorNum 6
+#define kFnUsdAbstractionVersionPatchNum 2
 
 #endif
