@@ -1089,7 +1089,207 @@ function Invoke-BuildPlugins {
 }
 
 # ==============================================================================
-# MENU 2: Cleanup (Uninstall dependencies & intermediate build files)
+# MENU 2: Extract & Sync Nuke NDK to Repository (.github/ndk/)
+# ==============================================================================
+
+function Invoke-ExtractNDK {
+    [CmdletBinding()]
+    param(
+        [string]$NukeFilter = ""
+    )
+
+    Safe-ClearHost
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host "         EXTRACT & SYNC NUKE NDK TO REPOSITORY (.github/ndk/)          " -ForegroundColor Yellow
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host "Discovers locally installed Nuke NDK headers and import libraries," -ForegroundColor Gray
+    Write-Host "and copies them into .github/ndk/ for fast, self-contained CI builds." -ForegroundColor Gray
+    Write-Host "------------------------------------------------------------------------" -ForegroundColor DarkGray
+    Write-Host ""
+
+    $ndkRepoRoot = Join-Path $WorkspaceRoot ".github\ndk"
+    $includeDest = Join-Path $ndkRepoRoot "include"
+    $winNdkDest  = Join-Path $ndkRepoRoot "win"
+
+    # 1. Discover installed Nuke versions
+    $installed = Get-InstalledNukeVersions
+
+    if ($installed.Count -eq 0) {
+        Write-Host "[WARNING] No Nuke installations were automatically found in C:\Program Files\Nuke*" -ForegroundColor Yellow
+        $customPath = if (-not [Console]::IsInputRedirected) {
+            Read-Host "Enter path to Nuke installation directory (or press [Enter] to cancel)"
+        } else { "" }
+
+        if (-not $customPath -or -not (Test-Path $customPath)) {
+            Write-Host "[INFO] Operation cancelled." -ForegroundColor Gray
+            Pause-Prompt "Press [Enter] to return..."
+            return
+        }
+
+        $ddLib = Join-Path $customPath "DDImage.lib"
+        $incDir = Join-Path $customPath "include"
+        if (-not (Test-Path $ddLib) -or -not (Test-Path $incDir)) {
+            Write-Host "[ERROR] Could not find DDImage.lib or include/ in '$customPath'." -ForegroundColor Red
+            Pause-Prompt "Press [Enter] to return..."
+            return
+        }
+
+        $header = Join-Path $customPath "include\DDImage\ddImageVersionNumbers.h"
+        $major = 0; $minor = 0; $rel = 0
+        if (Test-Path $header) {
+            $content = Get-Content $header -Raw
+            $major = [regex]::Match($content, 'kDDImageVersionMajorNum\s+(\d+)').Groups[1].Value
+            $minor = [regex]::Match($content, 'kDDImageVersionMinorNum\s+(\d+)').Groups[1].Value
+            $rel = [regex]::Match($content, 'kDDImageVersionReleaseNum\s+(\d+)').Groups[1].Value
+        }
+        $folderTag = if ($major -gt 0) { "Nuke${major}.${minor}" } else { "NukeCustom" }
+        $installed = @(
+            [PSCustomObject]@{
+                Name      = "Custom Nuke $major.$minor ($customPath)"
+                Version   = "$major.$minor"
+                FolderTag = $folderTag
+                Path      = $customPath
+                Major     = [int]$major
+                Minor     = [int]$minor
+            }
+        )
+    }
+
+    # 2. Select version(s) to extract (List available versions, NO raw text input required)
+    $toExtract = @()
+    if ($NukeFilter -ne "") {
+        if ($NukeFilter -ieq "ALL") {
+            $toExtract = $installed
+        } else {
+            $matched = $installed | Where-Object { $_.Version -match $NukeFilter -or $_.FolderTag -match $NukeFilter }
+            if ($matched) {
+                $toExtract = @($matched)
+            } else {
+                Write-Host "[ERROR] No installed Nuke matches filter: '$NukeFilter'" -ForegroundColor Red
+                Write-Host "Available installed Nuke versions on this machine:" -ForegroundColor Yellow
+                foreach ($ins in $installed) {
+                    Write-Host "  - $($ins.Name)  (Tag: $($ins.FolderTag), Path: $($ins.Path))" -ForegroundColor Gray
+                }
+                Pause-Prompt "Press [Enter] to return..."
+                return
+            }
+        }
+    } else {
+        $extractMenuOptions = @()
+        foreach ($ins in $installed) {
+            $extractMenuOptions += "Extract NDK from $($ins.Name)  [$($ins.FolderTag)]"
+        }
+        if ($installed.Count -gt 1) {
+            $extractMenuOptions += "Extract NDK from ALL Detected Nuke Versions"
+        }
+        $extractMenuOptions += "Specify Custom Nuke Installation Path..."
+        $extractMenuOptions += "Return to Main Menu"
+
+        $sel = Show-InteractiveMenu `
+            -Title "SELECT NUKE VERSION TO EXTRACT NDK" `
+            -SubTitle "Detected $($installed.Count) Nuke installation(s) on this system" `
+            -Options $extractMenuOptions
+
+        if ($sel -lt 0 -or $sel -eq ($extractMenuOptions.Count - 1)) {
+            return
+        }
+
+        if ($installed.Count -gt 1 -and $sel -eq ($extractMenuOptions.Count - 3)) {
+            $toExtract = $installed
+        } elseif ($sel -eq ($extractMenuOptions.Count - 2)) {
+            $customPath = Read-Host "Enter path to Nuke directory"
+            if ($customPath -and (Test-Path $customPath)) {
+                $ddLib = Join-Path $customPath "DDImage.lib"
+                $incDir = Join-Path $customPath "include"
+                if (-not (Test-Path $ddLib) -or -not (Test-Path $incDir)) {
+                    Write-Host "[ERROR] Could not find DDImage.lib or include/ in '$customPath'." -ForegroundColor Red
+                    Pause-Prompt "Press [Enter] to return..."
+                    return
+                }
+                $header = Join-Path $customPath "include\DDImage\ddImageVersionNumbers.h"
+                $major = 0; $minor = 0; $rel = 0
+                if (Test-Path $header) {
+                    $content = Get-Content $header -Raw
+                    $major = [regex]::Match($content, 'kDDImageVersionMajorNum\s+(\d+)').Groups[1].Value
+                    $minor = [regex]::Match($content, 'kDDImageVersionMinorNum\s+(\d+)').Groups[1].Value
+                    $rel = [regex]::Match($content, 'kDDImageVersionReleaseNum\s+(\d+)').Groups[1].Value
+                }
+                $folderTag = if ($major -gt 0) { "Nuke${major}.${minor}" } else { "NukeCustom" }
+                $toExtract = @(
+                    [PSCustomObject]@{
+                        Name      = "Custom Nuke $major.$minor ($customPath)"
+                        Version   = "$major.$minor"
+                        FolderTag = $folderTag
+                        Path      = $customPath
+                        Major     = [int]$major
+                        Minor     = [int]$minor
+                    }
+                )
+            } else {
+                return
+            }
+        } else {
+            $toExtract = @($installed[$sel])
+        }
+    }
+
+    # 3. Perform Extraction
+    New-Item -ItemType Directory -Path $includeDest -Force | Out-Null
+    New-Item -ItemType Directory -Path $winNdkDest -Force | Out-Null
+
+    $extractedCount = 0
+    foreach ($target in $toExtract) {
+        Write-Host ""
+        Write-Host ">>> Extracting NDK for $($target.Name) [$($target.FolderTag)] ..." -ForegroundColor Cyan
+        $srcInclude = Join-Path $target.Path "include"
+        $srcLib     = Join-Path $target.Path "DDImage.lib"
+        $targetWinFolder = Join-Path $winNdkDest $target.FolderTag
+
+        if (Test-Path $srcInclude) {
+            Write-Host "    Copying headers to $includeDest ..." -ForegroundColor Gray
+            Copy-Item -Path "$srcInclude\*" -Destination $includeDest -Recurse -Force
+            Write-Host "    [OK] Headers synced." -ForegroundColor Green
+        } else {
+            Write-Host "    [WARN] No include directory found in $($target.Path)" -ForegroundColor Yellow
+        }
+
+        if (Test-Path $srcLib) {
+            New-Item -ItemType Directory -Path $targetWinFolder -Force | Out-Null
+            $destLib = Join-Path $targetWinFolder "DDImage.lib"
+            Write-Host "    Copying DDImage.lib to $destLib ..." -ForegroundColor Gray
+            Copy-Item -Path $srcLib -Destination $destLib -Force
+            $mb = [math]::Round((Get-Item $destLib).Length / 1MB, 2)
+            Write-Host "    [OK] DDImage.lib copied ($mb MB)." -ForegroundColor Green
+            $extractedCount++
+        } else {
+            Write-Host "    [WARN] DDImage.lib not found in $($target.Path)" -ForegroundColor Yellow
+        }
+    }
+
+    Write-Host ""
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host "                        NDK EXTRACTION COMPLETE                         " -ForegroundColor Green
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host "Extracted $extractedCount Nuke version stub(s) into: $ndkRepoRoot" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Available Windows NDK versions now in repository:" -ForegroundColor Yellow
+    $allRepoNdks = Get-ChildItem -Directory $winNdkDest -Filter "Nuke*" -ErrorAction SilentlyContinue
+    foreach ($rn in $allRepoNdks) {
+        $hasLib = Test-Path (Join-Path $rn.FullName "DDImage.lib")
+        $status = if ($hasLib) { "[READY]" } else { "[INCOMPLETE]" }
+        Write-Host "  - $($rn.Name) $status" -ForegroundColor $(if ($hasLib) { "Green" } else { "Red" })
+    }
+    Write-Host ""
+    Write-Host "Next step to enable in GitHub Actions CI:" -ForegroundColor Gray
+    Write-Host "  git add .github/ndk" -ForegroundColor Cyan
+    Write-Host "  git commit -m `"ndk: update Nuke stubs`"" -ForegroundColor Cyan
+    Write-Host "  git push origin main" -ForegroundColor Cyan
+    Write-Host ""
+    Pause-Prompt "Press [Enter] to return..."
+}
+
+# ==============================================================================
+# MENU 3: Cleanup (Uninstall dependencies & intermediate build files)
 # ==============================================================================
 
 function Invoke-Cleanup {
@@ -1190,15 +1390,15 @@ function Invoke-ExitMenu {
 
 # Direct non-interactive execution if menu argument was supplied
 if ($MenuChoice -ne "") {
-    switch ($MenuChoice) {
-        "0" { Invoke-InstallRequirements; exit 0 }
-        "1" { Invoke-BuildPlugins -NukeFilter $TargetNuke -PluginFilter $TargetPlugin; exit 0 }
-        "2" { Invoke-Cleanup; exit 0 }
-        "3" { Invoke-ExitMenu }
-        "guide" { Show-ToolchainGuide; exit 0 }
-        "-g" { Show-ToolchainGuide; exit 0 }
+    switch -Regex ($MenuChoice) {
+        "^(0|install)$"                { Invoke-InstallRequirements; exit 0 }
+        "^(1|build)$"                  { Invoke-BuildPlugins -NukeFilter $TargetNuke -PluginFilter $TargetPlugin; exit 0 }
+        "^(2|ndk|extract|extract-ndk)$" { Invoke-ExtractNDK -NukeFilter $TargetNuke; exit 0 }
+        "^(3|cleanup|clean)$"          { Invoke-Cleanup; exit 0 }
+        "^(4|exit|quit)$"              { Invoke-ExitMenu }
+        "^(guide|-g)$"                 { Show-ToolchainGuide; exit 0 }
         default {
-            Write-Host "Unknown menu option: $MenuChoice (valid: 0, 1, 2, 3, guide)" -ForegroundColor Red
+            Write-Host "Unknown menu option: $MenuChoice (valid: 0, 1, 2, 3, 4, ndk, build, clean, guide)" -ForegroundColor Red
             exit 1
         }
     }
@@ -1208,6 +1408,7 @@ if ($MenuChoice -ne "") {
 $mainMenuOptions = @(
     "Install Requirements & Toolchain Audit (.venv, pip, dependencies)",
     "Build Plugins (Nuke version submenu & selective builds)",
+    "Extract & Sync Nuke NDK to Repository (.github/ndk/ for CI)",
     "Cleanup (Remove .venv & intermediate build files, preserve COMPILED/)",
     "Exit"
 )
@@ -1221,8 +1422,9 @@ while ($true) {
     switch ($sel) {
         0 { Invoke-InstallRequirements }
         1 { Invoke-BuildPlugins }
-        2 { Invoke-Cleanup }
-        3 { Invoke-ExitMenu }
+        2 { Invoke-ExtractNDK }
+        3 { Invoke-Cleanup }
+        4 { Invoke-ExitMenu }
         999 { Show-ToolchainGuide }
         -1 { Invoke-ExitMenu }
     }

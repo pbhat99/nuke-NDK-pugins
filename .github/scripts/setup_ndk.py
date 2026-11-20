@@ -30,20 +30,16 @@ def setup_ndk(platform_name, version, cache_dir=None):
     # 2. Platform-specific NDK directory
     if platform_name == "Windows":
         target_ndk = ndk_root / "win" / f"Nuke{version}"
-        if not target_ndk.exists() or not (target_ndk / "DDImage.lib").exists():
-            # If exact version folder doesn't exist, fall back to closest available (e.g. Nuke17.1 or Nuke16.0)
-            avail = sorted((ndk_root / "win").glob("Nuke*"))
-            if avail:
-                target_ndk = avail[-1]
-                print(f"[FALLBACK] Using closest available Windows NDK stub: {target_ndk.name}")
-            else:
-                target_ndk.mkdir(parents=True, exist_ok=True)
-                # Copy from local Windows install if present
-                for cand_ver in [f"Nuke{version}v2", f"Nuke{version}v1", f"Nuke{version}v9", f"Nuke{version}"]:
-                    local_lib = Path(f"C:/Program Files/{cand_ver}/DDImage.lib")
-                    if local_lib.exists():
-                        shutil.copy2(local_lib, target_ndk / "DDImage.lib")
-                        break
+        ddlib = target_ndk / "DDImage.lib"
+        
+        # Check availability before run - DO NOT assume closest version
+        if not target_ndk.exists() or not ddlib.exists():
+            avail_dirs = sorted((ndk_root / "win").glob("Nuke*"))
+            avail_versions = [d.name.replace("Nuke", "") for d in avail_dirs if (d / "DDImage.lib").exists()]
+            print(f"\n[ERROR] Requested Nuke {version} Windows NDK is not available in repository at: {ddlib}")
+            print(f"Available Windows NDK versions in repository: {', '.join(avail_versions) if avail_versions else 'None'}")
+            print(f"Do not assume closest version. To add Nuke {version}, run 'build.bat ndk' locally on a machine with Nuke {version} installed.")
+            sys.exit(1)
 
         # Ensure include/ exists inside target_ndk
         if common_include.exists() and not (target_ndk / "include").exists():
