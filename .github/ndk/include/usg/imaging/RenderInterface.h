@@ -5,6 +5,7 @@
 
 #include "usg/base/ArgSet.h"
 #include "usg/geom/Attribute.h"
+#include "usg/hd/SceneIndex.h"
 
 #include "fdk/math/Mat4.h"
 #include "fdk/math/Box2.h"
@@ -123,6 +124,15 @@ namespace usg
       //! Derived from DataFormat.
       bool        isFloatData() const;
 
+      struct SaveResult
+      {
+        bool success{false};
+        // Final output path (may differ from input if the implementation
+        // modify the path or filename in some way).
+        std::string outputPath;
+      };
+      SaveResult saveToFile(const std::string& filename, bool flipped = false) const;
+
 
     protected:
       std::unique_ptr<RenderOutputLayerHandle, void(*)(RenderOutputLayerHandle*)> _pImpl;
@@ -140,6 +150,9 @@ namespace usg
     //! Return the list of all loaded plugin names.
     static const std::vector<RenderPluginDesc>&  rendererPlugins();
 
+    //! Return the contexts for all loaded plugins.
+    static const TokenArray& rendererContexts();
+
     //! Checks whether the renderer plugin exists.
     static bool rendererPluginExists(Token id, RenderPluginDesc* desc = nullptr);
 
@@ -156,6 +169,10 @@ namespace usg
     bool              isValid() const;
     operator          bool()    const { return this->isValid(); }
 
+    //! Checks whether the renderer plugin exists and is supported. If GPUEnabled is true, also
+    //! checks whether the renderer supports GPU rendering.
+    bool isSupported(const Token& pluginId, bool GPUEnabled = false) const;
+
     //-------------------------------------------------------------
 
     //! Identifier token for this renderer interface - should be unique!
@@ -168,7 +185,7 @@ namespace usg
 
     //! Initialize the renderer interface, copying the provided args.
     //! This method will then call the virtual subclass method _initRenderer().
-    void  initRenderer(const ArgSet& args);
+    bool  initRenderer(const ArgSet& args);
 
     //! Returns true if the render substructures are allocated and initialized.
     //! Note - check this before calling any accessor methods!
@@ -211,6 +228,12 @@ namespace usg
     //! Sets the AOVs which will be rendered to the viewport if presentation is enabled.
     void setPresentationOutput(const Token& name);
 
+    void setCameraPath(const Path& cameraPath);
+
+    //! Sets the color correction mode to use when rendering. See HdTokens->colorCorrection.
+    void setColorCorrectionMode(const Token& colorCorrection);
+    const Token& getColorCorrectionMode() const;
+
     /// -------------------------------------------------------
     /// Lighting API
 
@@ -242,10 +265,19 @@ namespace usg
     /// Shadow API
 
     //! Turns the shadow task on or off.
-    void setEnableShadows(bool enabled) { _enableShadows = enabled; }
+    void setEnableShadows(const bool enabled) { _enableShadows = enabled; }
 
     //! Returns whether the shadow task is on or off.
     bool isShadowsEnabled() const { return _enableShadows; }
+
+    /// -------------------------------------------------------
+    /// Transparency API
+
+    //! Enables or disables alpha transparency in the viewer.
+    void setEnableTransparency(const bool enabled) { _enableTransparency = enabled; }
+
+    //! Returns whether transparency is enabled.
+    bool isTransparencyEnabled() const { return _enableTransparency; }
 
     /// -------------------------------------------------------
     /// Material API
@@ -260,6 +292,9 @@ namespace usg
     //! Returns whether scene materials are enabled/disabled.
     bool isMaterialEnabled() const { return _enableSceneMaterials; }
 
+    void setDisplayDefault(const bool displayDefault) { _displayDefault = displayDefault; }
+    bool isDisplayDefault() const { return _displayDefault; }
+
     void setDisplayRender(const bool displayRender) { _displayRender = displayRender; }
     bool isDisplayRender() const { return _displayRender; }
 
@@ -269,8 +304,16 @@ namespace usg
     void setDisplayGuides(const bool displayGuides) { _displayGuides = displayGuides; }
     bool isDisplayGuides() const { return _displayGuides; }
 
+    void setShowCameras(const bool show) { _showCameras = show; }
+    bool isShowCamerasEnabled() const { return _showCameras; }
+
     void setFlatShading(bool enable) { _flatShading = enable; }
     bool isFlatShading() const { return _flatShading; }
+
+    TokenArray getMaterialRenderContexts() const;
+    TokenArray getShaderSourceTypes() const;
+    TokenArray getSupportedSPrimTypes() const;
+    TokenArray getRenderSettingsNamespaces() const;
 
     //-------------------------------------------------------------
 
@@ -296,6 +339,9 @@ namespace usg
     //! Get the identifier name for the scene
     const std::string& getSceneName() const { return _sceneName; }
 
+    void insertSceneIndex(const hd::SceneIndexRefPtr& inputScene, const Path& scenePathPrefix);
+
+    void setupDefaultLightsAndMaterials(const std::string& defaultsStageSceneIndexPath, const std::string& domeLightTexturePath = "");
 
   protected:
     //! Subclasses can do any custom initializations in this method.
@@ -316,14 +362,19 @@ namespace usg
     bool       _enableLighting = true;       //!<
     bool       _enableSceneMaterials = true; //!<
     bool       _enableShadows = false;       //!<
+    bool       _displayDefault = true;       //!< True if we are showing default prims
     bool       _displayRender = true;        //!< True if we are showing render prims
     bool       _displayProxy = false;        //!< True if we are showing proxy prims
     bool       _displayGuides = false;       //!< True if we are showing guide prims
+    bool       _showCameras = true;          //!< True if we are showing camera frustum visualizations
+    bool       _enableTransparency = true;   //!< True if alpha transparency is enabled
     //
     float      _pointSize = 3.0f;
     fdk::Vec4f _pointColor{1.0f, 0.0f, 0.0f, 1.0f};
     //
     int        _refineLevel = 0;             //!< The refine level for subdiv prims.
+    //
+    Token      _colorCorrectionMode;
   };
 
 

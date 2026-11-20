@@ -5,6 +5,7 @@
 
 #include "DDImage/PluginObject.h"
 #include "DDImage/Pixel.h"             // convenience for SlrShader plugins
+#include "DDImage/Sampler.h"           // convenience for SlrShader plugins
 #include "DDImage/SlrEngineContext.h"  // convenience for SlrShader plugins
 #include "DDImage/SlrShadingContext.h" // convenience for SlrShader plugins
 
@@ -18,6 +19,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+
 namespace slr
 {
   class SlrCoShader;
@@ -27,34 +29,67 @@ namespace slr
   class SlrVolumeShader;
   class SlrLensShader;
 
-  //--------------------------------------------------
+  //------------------------------------------------------------------------
 
+  //
+  // Helper functions for shaders to convert common property types into Nuke objects.
+  //
 
-  // TODO: these helper function are here temporarily to help convert an IntArray or Int
-  // usg::ShaderProperty into DD::Image::ChannelSet or DD::Image::Channel
+  //! Convert a local, uniform Float usg::ShaderProperty (non animating, non connecting) into a single float.
+  DDImage_API
+  float    GetUniformInputFloat(const usg::ShaderDesc& shaderDesc, const char* propName, float defVal = 0.0f);
 
-DDImage_API
-DD::Image::Channel GetInputIntValueAsChannel(const usg::ShaderDesc&    shader_desc,
-                                             const char*               prop_name,
-                                             const DD::Image::Channel& def_chan = DD::Image::Chan_Black);
+  //! Convert a local, uniform Int usg::ShaderProperty (non animating, non connecting) into a single int32.
+  DDImage_API
+  int32_t  GetUniformInputInt(const usg::ShaderDesc& shaderDesc, const char* propName, int32_t defVal = 0);
 
-DDImage_API
-void GetInputIntArrayValueAsChannelArray(const usg::ShaderDesc& shader_desc,
-                                         const char*            prop_name,
-                                         std::vector<DD::Image::Channel>&  out,
-                                         int32_t                default_size = 0);
+  //! Convert a local, uniform Int usg::ShaderProperty (non animating, non connecting) into a single bool.
+  DDImage_API
+  bool     GetUniformInputIntAsBool(const usg::ShaderDesc& shaderDesc, const char* propName, bool defVal = false);
 
-DDImage_API
-DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&       shader_desc,
-                                                        const char*                  prop_name,
-                                                        const DD::Image::ChannelSet& def_channels = DD::Image::Mask_None);
+  //-------------------------
 
+  //! Convert an Int usg::ShaderProperty (non animating, non connecting) into a DD::Image::Channel.
+  DDImage_API
+  DD::Image::Channel  GetInputIntValueAsChannel(const usg::ShaderDesc&    shaderDesc,
+                                                const char*               propName,
+                                                const DD::Image::Channel& defChan = DD::Image::Chan_Black);
+
+  //! Convert an IntArray or Int usg::ShaderProperty (non animating, non connecting) into a list
+  //! of DD::Image::Channels.
+  //! Default size must be > 0 otherwise nothing happens, because the property may not provide
+  //! the expected array size. Typically this will be 3 (an RGB knob) or 4 (an RGBA knob).
+  DDImage_API
+  std::vector<DD::Image::Channel>  GetInputIntArrayValueAsChannelArray(const usg::ShaderDesc& shaderDesc,
+                                                                       const char*            propName,
+                                                                       int32_t                defaultSize = 0);
+
+  //! Convert an IntArray or Int usg::ShaderProperty (non animating, non connecting) into a
+  //! DD::Image::ChannelSet.
+  DDImage_API
+  DD::Image::ChannelSet  GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&       shaderDesc,
+                                                           const char*                  propName,
+                                                           const DD::Image::ChannelSet& defChannels = DD::Image::Mask_None);
+
+  //------------------------------------------------------------------------
+
+  //! One of these is stored in the thread safe SlrThreadContext for every SlrShader
+  //! created allowing an SlrShader to safely store data that needs to be per thread,
+  //! like DD::Image::Samplers, DD::Image::Pixels, etc.
+  struct SlrShaderThreadData
+  {
+    typedef void (*DeleteFunc)(void* self);
+    void*      data = nullptr;        //!< Allocated data blob
+    size_t     dataSize = 0;          //!< Size of data blob in bytes
+    DeleteFunc deleteFunc = nullptr;  //!< Function to call when data blob is deleted
+  };
 
   //--------------------------------------------------
 
   // Convenience for building OutputPortList functions
   #define SLRSAMPLEFUNC(A) reinterpret_cast<void*>(A)
 
+  //--------------------------------------------------
 
   /*! \class DD::Image::SlrShader
 
@@ -136,10 +171,10 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
 
       InputKnob(const char* _name,
                 KnobType    _type,
-                bool        is_uniform = false) :
-        name((_name) ? _name : ""),
-        type(_type),
-        isUniform(is_uniform)
+                bool        is_uniform = false)
+        : name((_name) ? _name : "")
+        , type(_type)
+        , isUniform(is_uniform)
       {
         //
       }
@@ -160,27 +195,29 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
     */
     struct OutputPort
     {
-      const char*           name;         //!< Pointer to the name string - no local copy is made!
-      KnobType              type;         //!< Type of port
-      void*                 samplerFunc;  //!< Sampler function, cast to correct class using 'type'.
-      int32_t               index;        //!< Port position in OutputPortList
-      bool                  isVarying;    //!< Is the port data constant or varying?
-      DD::Image::ChannelSet channels;     //!< Port's output channels (cached result from validateShader())
-      bool                  hasRgb;       //!< Does port provide Chans RGB? (cached result from validateShader())
-      bool                  hasAlpha;     //!< Does port provide Chan_Alpha? (cached result from validateShader())
-      DD::Image::ChannelSet requested;    //!< Intersected set of channels and all requested channels (cached result from requestResources())
+      const char*           name;           //!< Pointer to the name string - no local copy is made!
+      KnobType              type;           //!< Type of port
+      void*                 samplerFunc;    //!< Sampler function, cast to correct class using 'type'.
+      int32_t               index;          //!< Port position in OutputPortList
+      bool                  isVarying;      //!< Is the port data constant or varying?
+      DD::Image::ChannelSet channels;       //!< Port's output channels (cached result from validateShader())
+      bool                  hasRgb;         //!< Does port provide Chans RGB? (cached result from validateShader())
+      bool                  hasAlpha;       //!< Does port provide Chan_Alpha? (cached result from validateShader())
+      bool                  hasPresence;    //!< Does port provide Chan_Coverage? (cached result from validateShader())
+      DD::Image::ChannelSet requested;      //!< Intersected set of channels and all requested channels (cached result from requestResources())
 
       OutputPort(const char* _name,
                  KnobType    _type,
-                 void*       sampler_func) :
-        name(_name),
-        type(_type),
-        samplerFunc(sampler_func),
-        index(0),
-        isVarying(false),
-        hasRgb(false),
-        hasAlpha(false),
-        requested(DD::Image::Mask_None)
+                 void*       sampler_func)
+        : name(_name)
+        , type(_type)
+        , samplerFunc(sampler_func)
+        , index(0)
+        , isVarying(false)
+        , hasRgb(false)
+        , hasAlpha(false)
+        , hasPresence(false)
+        , requested(DD::Image::Mask_None)
       {
         //
       }
@@ -254,6 +291,8 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
     struct Dual2Vec3fBinding;
     struct Dual2Vec4fBinding;
 
+    struct ThreadShaderData;
+
 
     /*
         Output sampler handlers, typically assigned in the OutputPortList
@@ -315,6 +354,9 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
 
       //! Returns true if the bound output port provides alpha.
       inline bool hasAlpha() const { return (port) ? port->hasAlpha : false; }
+
+      //! Returns true if the bound output port provides presence (coverage.)
+      inline bool hasPresence() const { return (port) ? port->hasPresence : false; }
 
       //! Returns true if the bound output port provides the channel.
       inline bool hasChannel(DD::Image::Channel c) const { return (port) ? port->hasChannel(c) : false; }
@@ -480,11 +522,11 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
       operator fdk::Vec4f() const;
 
       Color4Binding() : opacityPort(nullptr), samplerFunc(uniformColor4Sampler) {}
-      Color4Binding(const fdk::Vec4f& v) :
-        opacityPort(nullptr),
-        samplerFunc(uniformColor4Sampler),
-        colorBinding(v.xyz()),
-        opacityBinding(v.w) {}
+      Color4Binding(const fdk::Vec4f& v)
+        : opacityPort(nullptr)
+        , samplerFunc(uniformColor4Sampler)
+        , colorBinding(v.xyz())
+        , opacityBinding(v.w) {}
     };
 
     struct Dual2fBinding : public FloatBinding
@@ -602,10 +644,13 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
 
 
   protected:
+    friend class RenderEngine;
     SlrEngineContext*      _slrtx;                  //!< Renderer owner
+    int32_t                _identifierIndex;        //!< Renderer-assigned unique index Id in a linear array of shaders
     std::string            _path;                   //!< Shader path in material group
     bool                   _debug;                  //!< 
-    int32_t                _updateVersion;          //!< Update version incremented in updateProperties()
+    int32_t                _renderVersion;          //!< Update version incremented in updateProperties()
+    int32_t                _validateVersion;        //!< Update version incremented in validateShader()
     int32_t                _requestVersion;         //!< Request version incremented in requestResources(()
     //
     InputKnobList          _inputs;                 //!< Input knobs, copied and updated from the static list
@@ -614,12 +659,12 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
     KnobNameMap            _outputNameMap;          //!< Name to output index map
     //
     ConnectionList         _inputConnections;       //!< Shaders bound to input knobs
-    ShadingLayerReqSet      _geomPrimvarsReq;       //!< Names of primvars we need
+    ShadingLayerReqSet     _geomPrimvarsReq;        //!< Names of primvars we need
     //
     ShadingLayerReqSet     _requestedGeometryPrimvars;  //!< Geometry primvar attributes being requested
     ShadingLayerReq        _parametricStLayer;          //!< Layer name to use for parametric st coordinates.
     //
-    ShadingLayerReqSet     _writableShadingLayers;  //!< Set of shading layers the shader wants to read or write to
+    ShadingLayerReqSet     _writableShadingLayers;      //!< Set of shading layers the shader wants to read or write to
     //
     DD::Image::ChannelSet  _inputTextureColorChannels;  //!< Set of color channels output by all input texture bindings that this shader needs
     DD::Image::ChannelSet  _outputColorChannels;        //!< Set of all output color (blendable) channels this shader produces
@@ -644,9 +689,17 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
     //! Default implementation does nothing.
     virtual void  _requestResources(const DD::Image::ChannelSet& request_channels);
 
-    //! Subclass portion of initializeForShading().
+    //! Subclass portion of initializeForShadingThread().
+    //!
+    //! Initialize any custom shader data in preparation for doing shading on engine thread
+    //! \a sttx. \a threadShaderData is a struct stored in the thread safe SlrThreadContext
+    //! and solely owned by that thread, so an SlrShader should allocate a locally defined
+    //! object (data blob) and configure \a threadShaderData. When the shading thread is
+    //! eventually destroyed it will call the ThreadShaderData::deleteFunc for each shader.
+    //!
     //! Default implementation does nothing.
-    virtual void  _initializeForShading(uint32_t num_shading_threads);
+    virtual void  _initializeForShadingThread(const SlrThreadContext& sttx,
+                                              SlrShaderThreadData&    threadShaderData);
 
     //! Subclass portion of cleanupAfterShading().
     //! Default implementation does nothing.
@@ -661,16 +714,19 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
               void*                 inputs_storage_data = nullptr,
               size_t                inputs_storage_size = 0);
 
-    //! Must have a virtual destructor
-    virtual ~SlrShader() {}
+    //! Must have a virtual destructor.
+    virtual ~SlrShader();
 
     //! Returns the class name, must implement.
     virtual const char*  shaderClass() const = 0;
 
     //! Global render context, the owner of the SlrShader instance.
     //! Use this to get access to global render info.
-    SlrEngineContext*  globalRenderContext() const { return _slrtx; }
+    SlrEngineContext&  globalRenderContext() const;
 
+    //! Renderer assigned unique index Id in a linear array of shaders. Usually used to store
+    //! private shader data in the engine shading thread context.
+    int32_t  identifierIndex() const { return _identifierIndex; }
 
     /*! Create a SlrShader instance from a shader class name, an existing shader description,
         or a ShaderDesc.
@@ -709,10 +765,9 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
     void                setPath(const std::string& path) { _path = path; }
 
     //! 
-    int32_t  getUpdateVersion() const { return _updateVersion; }
+    int32_t  getRenderVersion() const { return _renderVersion; }
     //!
-    void     setUpdateVersion(int32_t v) { _updateVersion = v; }
-
+    void     setRenderVersion(const int32_t& v) { _renderVersion = v; }
 
     //! Return a static list of input knobs for this shader. Base class returns an empty list.
     virtual const InputKnobList&   getInputKnobDefinitions() const;
@@ -731,8 +786,25 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
     //! Returns the number of output knobs.
     uint32_t     numOutputs() const { return (uint32_t)_outputs.size(); }
 
+    //! Returns the input index of the 'base' (or 'default' or 'background') input
+    //! for the shader. This is the input that configuration info flows down, such
+    //! as format info, channel sets or global trait masks.
+    //!
+    //! Typically only shaders that do merging or switching operations, or surface
+    //! shaders need to change the default.
+    //!
+    //! Default returns index 0.
+    virtual int32_t baseInputIndex() const { return 0; }
+
+    //! Returns the shader, if any, on input baseInputIndex(). Convenience, same as
+    //! getting the Connection for the input and returning its source shader.
+    const SlrShader*  baseInputShader() const;
+
     //! Get the list of input connections.
     const ConnectionList&  inputConnections() const { return _inputConnections; }
+
+    //! Returns the input connection if index is in the valid range.
+    const Connection*  inputConnection(uint32_t inputIndex) const;
 
     //! Returns true if the InputKnob type and OutputPort type are compatible.
     static bool  isConnectionTypeCompatible(const InputKnob&  input_knob,
@@ -761,7 +833,6 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
 
 
     //---------------------------------------------------------
-
 
     //! Returns input knob or null if not available.
     InputKnob*   getInputKnob(uint32_t input) const;
@@ -853,7 +924,7 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
 
         By default the port's type is used to determine the channels. Only types that are
         explicitly color types return a valid channel set. So COLOR3_KNOB returns Mask_RGB
-        while COLOR4_KNOB returns Mask_RGBA, and COLOR_R_KNOB returns Mask_Red, COLOR_A_KNOB
+        while COLOR4_KNOB returns Mask_RGBA, COLOR_R_KNOB returns Mask_Red, COLOR_A_KNOB
         returns Mask_Alpha, etc.
 
         Single value types like INT, FLOAT and DOUBLE, and vector/matrix types all
@@ -891,7 +962,7 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
         requests from all inputs, and then it calls the virtual _validateShader()
         for the subclass to do any additional work.
     */
-    void  validateShader(SlrEngineContext& slrtx);
+    void  validateShader();
 
     /*! Allows custom output port configurations to be done on a shader subclass, for example
         setting whether a port has certain channels active or the value can vary.
@@ -915,44 +986,54 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
         This is called single-threaded by the Renderer during Iop::_request(),
         in preparation for the threaded Iop engine() calls when shading is done.
 
-        The shader should request an Iop sampler by calling slrtx.requestTextureSampler()
-        and passing the input Iop* and the channels that will be read from it.
-        Since there can be multiple shaders accessing the same source Iop*
-        with different channel sets, all the shader requests are collated together
-        before the DD::Image::Sampler objects are created by the Renderer, so
-        the created Sampler will contain the union of all requested channels.
+        The shader should request an Iop sampler by calling
+        globalRenderContext()->requestTextureSampler() and passing the input Iop*
+        and channels that will be read from it. Since there can be multiple shaders
+        accessing the same source Iop* with different channel sets, all the shader
+        requests are collated together before the DD::Image::Sampler objects are
+        created by the Renderer, so the created Sampler will contain the union of
+        all requested channels.
 
         To complete the request process the shader should retrieve the created
-        DD::Image::Samplers in initializeForShading() using
-        slrtx.getTextureSampler(Iop*), and store them locally so they're
-        available during the threaded shading methods.
+        DD::Image::Samplers in _initializeForShadingThread() using
+        globalRenderContext()->getTextureSampler(Iop*), and store them locally
+        so they're available during the threaded shading methods.
 
         Base class calls requestResources() on the set of input shaders, then
         calls the virtual _requestResources() for the subclass to do its work.
     */
     void  requestResources(const DD::Image::ChannelSet& request_channels);
 
-    /*! Initialize the shader's state in preparation for shading.
+    //---------------------------------------------------------
 
-        At this point any Iop texture samplers requested in requestResources() have
-        been created by the Renderer and the shader can make local copies of the
+    /*! Initialize any custom shader data in preparation for doing shading on engine thread
+        \a sttx. \a customThreadData is a pointer stored in the thread safe SlrThreadContext
+        and is owned solely by that thread, so an SlrShader should allocate a locally
+        defined struct and set \a threadShaderData to it. When the shading thread is
+        eventually destroyed it will call the ThreadShaderData::deleteFunc for each shader.
+
+        At this point any Iop texture samplers requested in requestResources() can
+        be created by the Renderer and the shader can make local copies of the
         DD::Image::Sampler pointers by querying slrtx.getTextureSampler(iop).
 
         All needed input primvar attributes called out in _validateShader() (added to the
         _requestedGeometryPrimvars set) are now assigned Channel indices in shading channel
-        manager and can be retrieved via SlrEngineContext::retrievePrimvarLayer(<primvar_name>)
+        manager and can be retrieved via globalRenderContext().retrievePrimvarLayer(<primvar_name>)
         method and stored locally on the shader for speedy data access in the shading
         calls. Note that <primvar_name> is the name of the primitive attribute -without-
         the leading 'primvars:' namespace.
 
-        Base class calls initializeForShading() on the set of input shaders then
-        calls the virtual _initializeForShading() for the subclass to do its work.
+        Base class calls initializeForShadingThread() on the set of input shaders then
+        calls the virtual _initializeForShadingThread() for the subclass to do its work.
     */
-    void  initializeForShading(uint32_t num_shading_threads);
+    void  initializeForShadingThread(const SlrThreadContext& sttx);
 
+    //! 
+//    void  
 
     /*! Called when the render is complete and the shader can delete any temp
-        allocations done in initializeForShading().
+        allocations done in initializeForShadingThread().
+
         The Renderer calls this on Iop::_close() which clears out render prims,
         texture samplers, etc. The Renderer will do another
         validate/request/initialize sequence before the shaders are called
@@ -968,6 +1049,33 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
     // Resources
     //---------------------------------------------------------
 
+    /*! Return the opacity traits for the renderable influenced by this shader. This
+        method will be called for each renderable Gprim a surface shader is assigned to,
+        and the surface shader can then optionally query its input shaders for their
+        traits.
+
+        By default this returns the opaqueSolid() OpacityTraitsMask.
+
+        If a shader requires renderable specific primvar values to determine opacity
+        then it can call SlrEngineContext::gprimProvidesPrimvar() to find if a primvar
+        is available for that renderable and its surface interpolation type.
+    */
+    virtual ndk::OpacityTraitsMask  getRenderableOpacityTraits(const SlrPrimInfo& primInfo) const { return ndk::opaqueSolid(); }
+
+    //! Shader turns on cutout mode, which is passed down to the surface shader and
+    //! applied by the integrator.
+    //! When this is true the integrator should not fill the color channelsfor this surface
+    //! and leave them empty (zeroed).
+    //! Default is false.
+    virtual bool  cutoutModeEnabled() const { return false; }
+
+    //! Shader turns on cutout data aovs mode, which is passed down to the surface shader
+    //! and applied by the integrator.
+    //! When this is true the integrator should not fill the data avos for this surface
+    //! and leave them empty (zeroed).
+    //! Default is false.
+    virtual bool  cutoutModeRemovesDataAovsEnabled() const { return false; }
+
     /*! Return the set of named primvars this shader wants to read from the geometry.
 
         Note that even though the shader has requested a primvar that does not mean it will
@@ -975,8 +1083,9 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
         available will be added to the shading layer set.
 
         Retrieval of the shading layer channels should be done in requestResources()
-        via SlrEngineContext::retrievePrimvarLayer(<primvar_name>). Note that <primvar_name>
-        is the name of the primitive attribute -without- the leading 'primvars:' namespace.
+        via globalRenderContext().retrievePrimvarLayer(<primvar_name>). Note that
+        <primvar_name> is the name of the primitive attribute -without- the leading
+        'primvars:' namespace.
 
         If this shader wants to read or write to an arbitrary shading layer then request
         those by implementing requestedWritableShadingLayers().
@@ -997,7 +1106,7 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
 
         Default implementation returns an empty value.
     */
-    virtual ShadingLayerReq            parametricStPrimvar() const { return ShadingLayerReq(); }
+    virtual ShadingLayerReq  parametricStPrimvar() const { return ShadingLayerReq(); }
 
     /*! Return the set of arbitrary shading layers this shader wants to read or write to.
         This set should be constructed in _validateShader(), it is cleared at the start
@@ -1135,6 +1244,42 @@ DD::Image::ChannelSet GetInputIntArrayValueAsChannelSet(const usg::ShaderDesc&  
   using SlrLightShaderGroup    = SlrShaderGroup<SlrLightShader>;
   using SlrVolumeShaderGroup   = SlrShaderGroup<SlrVolumeShader>;
   using SlrLensShaderGroup     = SlrShaderGroup<SlrLensShader>;
+
+
+  //------------------------------------------------------------------------
+
+
+  /*! Extension interface that adds cutout knob controls and the mappings
+      to the shader parameters.
+      "cutout_mode_enable" Int
+      "cutout_mode_removes_data_aovs" Int
+  */
+  class DDImage_API SlrShaderCutoutControlsI
+  {
+  public:
+    bool  cutoutModeControl() const { return (_cutoutModeBinding.get() > 0); }
+    bool  cutoutModeRemovesDataAovsControl() const { return (_cutoutModeRemovesDataAovsBinding.get() > 0); }
+
+    //! Retrieve shader cutout properties from \a shaderDesc and store in local vars.
+    //! Call this from the ownerSlrShader::updateProperties() method.
+    virtual void  cutoutModesRetrieveProperties(SlrShader* ownerSlrShader, const usg::ShaderDesc& shaderDesc);
+
+
+    //! Update the local cutout state. Call this from the ownerSlrShader::_validateShader() method.
+    //! If \a ownerSlrShader has a valid input on baseInputIndex() the opacity traits from that
+    //! input are automatically copied and the local shader properties then applied as overrides.
+    //! Note that the local properties will only -enable- the modes, never disable them if the
+    //! input has them enabled.
+    virtual void  cutoutModesValidate(SlrShader* ownerSlrShader);
+
+
+  protected:
+    SlrShader::IntBinding _cutoutModeBinding;                 //!< Surface acts as a cutout/holdout/matte
+    SlrShader::IntBinding _cutoutModeRemovesDataAovsBinding;  //!< If cutout surface enabled, does depth & aovs get cut as well
+
+    bool _cutoutModeEnabled = false;                //!< If true enable cutout mode
+    bool _cutoutModeRemovesDataAovsEnabled = false; //!< If cutout mode is on, also cutout data aovs (depth, normals, etc)
+  };
 
 
 //-----------------------------------------------------------------------------------

@@ -167,48 +167,13 @@ namespace DD {
       /**
        * Allocate a new object and make this pointer be a reference to it.
        */
-      void allocate()
+      template<class... TYPES>
+      void allocate(TYPES... args)
       {
         if (_object) {
           _object->unref();
         }
-        _object = new T();
-        _object->ref();
-      }
-
-      /**
-       * Allocate a new object and make this pointer be a reference to it.
-       */
-      template<class P1> void allocate(const P1& p1)
-      {
-        if (_object) {
-          _object->unref();
-        }
-        _object = new T(p1);
-        _object->ref();
-      }
-      
-      /**
-       * Allocate a new object and make this pointer be a reference to it.
-       */
-      template<class P1, class P2> void allocate(const P1& p1, const P2& p2)
-      {
-        if (_object) {
-          _object->unref();
-        }
-        _object = new T(p1, p2);
-        _object->ref();
-      }
-      
-      /**
-       * Allocate a new object and make this pointer be a reference to it.
-       */
-      template<class P1, class P2, class P3> void allocate(const P1& p1, const P2& p2, const P3& p3)
-      {
-        if (_object) {
-          _object->unref();
-        }
-        _object = new T(p1, p2, p3);
+        _object = new T(args...);
         _object->ref();
       }
       

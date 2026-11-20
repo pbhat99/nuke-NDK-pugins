@@ -16,7 +16,9 @@
 #define FN_SHARED_EXPORT __attribute__ ((visibility("default")))
 #endif
 
-#define mFnSharedObjectExport FN_SHARED_EXPORT 
+#ifndef mFnSharedObjectExport
+#define mFnSharedObjectExport FN_SHARED_EXPORT
+#endif
 
 #ifndef FN_SHARED_IMPORT
 // FIXME With GCC this macro expands to nothing however with clang that causes

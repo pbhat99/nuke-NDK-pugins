@@ -5,9 +5,10 @@
 
 #include "usg/base/Value.h"
 #include "usg/base/Token.h"
-#include "usg/geom/CustomData.h"
+#include "usg/geom/ValueDictionary.h"
 #include "usg/geom/Path.h"
 
+#include "fdk/base/Hash.h"
 #include "fdk/base/Time.h"
 #include "fdk/base/StringTypes.h"
 
@@ -118,6 +119,9 @@ namespace usg
     //! Returns the attribute's type name.
     const std::string&  getTypeName() const;
 
+    //! Returns a hash of the whole attribute.
+    fdk::Hash           getHash() const;
+
     //! Returns the number of data elements for each value. For example, 3 for a Vector3 or 16 for a Matrix4.
     size_t              getNumDataElements() const;
 
@@ -138,6 +142,10 @@ namespace usg
 
     //! Sets the display group of the attribute
     bool setDisplayGroup(const std::string& displayGroup);
+
+    //! Returns the displayGroup as a sequence of groups to be nested, or an empty vector if
+    //! displayGroup is empty or not authored.
+    std::vector<std::string> getNestedDisplayGroups() const;
 
     //! Returns the documentation for the attribute
     std::string getDocumentation() const;
@@ -161,6 +169,9 @@ namespace usg
 
     //! Returns true if the attribute has a fallback value provided by a schema.
     bool  hasFallbackValue() const;
+
+    /// Returns the fallback value for the attribute.
+    Value getFallbackValue() const;
 
     //! Is the attribute currently blocked? Same as calling !hasAuthoredValue().
     bool  isBlocked() const;
@@ -273,14 +284,28 @@ namespace usg
     //! Gets the interpolation for this attribute
     Token  getInterpolation() const;
 
+    //----------------------------------------------------------
+
+    //! Returns the attribute's composed limits dictionary.
+    ValueDictionaryRef getLimits() const;
+
+    //! Returns true if a limits dictionary is authored for this attribute.
+    bool  hasAuthoredLimits() const;
+
+    //----------------------------------------------------------
+
     //! Sets a value in the custom data for this attribute
-    void setCustomData(const std::string& key, const Value& value);
+    void   setCustomData(const std::string& key, const Value& value);
 
     //! Returns the value for \a key in the custom data for this attribute.
-    bool getCustomData(const std::string& key, Value& value) const;
+    bool   getCustomData(const std::string& key, Value& value) const;
 
     //! Returns the attribute's custom data.
-    CustomDataRef getCustomData() const;
+    ValueDictionaryRef getCustomData() const;
+
+    //! Returns a top-level metadata field that holds a dictionary, or an empty dict if the
+    //! field is absent or is not a dictionary type.
+    ValueDictionaryRef getFieldAsDict(const Token& field_name) const;
 
     //! Sets if Attribute is custom or not
     void setCustom(bool isCustom);

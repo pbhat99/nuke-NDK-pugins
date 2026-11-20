@@ -65,6 +65,16 @@ namespace DD
 
       ~Execute() { doStuff(this, DESTRUCT, nullptr); }
 
+      //! Generate an Op graph for the node that owns \a op at \a outputContext.
+      //! This Op graph will be "locked" and will not be altered until the Execute is
+      //! destroyed or reset() is called.
+      OpGraphLocation generateOpGraphAt(Op* op, const OutputContext& outputContext);
+
+      //! Generate an Op graph for the input on the node that owns \a op at \a outputContext.
+      //! This Op graph will be "locked" and will not be altered until the Execute is
+      //! destroyed or reset() is called.
+      OpGraphLocation generateOpGraphForInput(Op* op, int nodeInputNumber, const OutputContext& outputContext);
+
       /** Produce input n of \a op at frame \a frame. This Op will be
           "locked" and will not be altered until the Execute is destroyed
           or reset() is called.

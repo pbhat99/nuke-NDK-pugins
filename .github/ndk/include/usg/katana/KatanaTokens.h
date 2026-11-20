@@ -14,8 +14,13 @@ namespace usg {
   namespace katana {
     struct USG_API KatanaTokensDef {
       Token::Lazy geometryCenterOfInterest{ "geometry:centerOfInterest" };
+      Token::Lazy splatsVisible{ "splatsVisible" };
+      Token::Lazy useBasicMaterials{ "useBasicMaterials" };
+      Token::Lazy useDefaultLights{ "useDefaultLights" };
+      Token::Lazy volumesVisible{ "volumesVisible" };
       struct {
         Token::Lazy KatanaLightAPI{ "KatanaLightAPI" };
+        Token::Lazy KatanaViewerSettings{ "KatanaViewerSettings" };
       } types;
       // --(BEGIN CUSTOM CODE)--
       // --(END CUSTOM CODE)--

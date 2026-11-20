@@ -19,15 +19,13 @@ namespace DD
     class LUT;
     class AudioReaderI;
 
-    typedef Read ReaderOwner; // for back-compatibility with 5.1 plugin source
+#if kDDImageVersionMajorNum <= 17
+    using ReaderFormat = FileReaderFormat; // ReaderFormat type is deprecated, use FileReaderFormat instead
+    using ReaderOwner = Read; // ReaderOwner type is deprecated, use Read instead
+#else
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 17."
+#endif
 
-    class DDImage_API ReaderFormat : public FileHandler
-    {
-    public:
-      ~ReaderFormat() override;
-      virtual void append(Hash& hash) = 0;
-    };
-    
     /*! \class DD::Image::CodecReaderFormat
        A reader format capable of handling both container and codec specific knobs.
 
@@ -40,7 +38,7 @@ namespace DD
        
        Subclasses should implement codec_knobs() just as an Op would.
      */
-    class DDImage_API CodecReaderFormat : public ReaderFormat, public CodecHandler
+    class DDImage_API CodecReaderFormat : public FileReaderFormat, public CodecHandler
     {
     public:
       ~CodecReaderFormat() override;
@@ -420,7 +418,7 @@ namespace DD
 
         ReaderConstructor constructor;
 
-        typedef ReaderFormat* (*ReaderFormatConstructor)(Read*);
+        typedef FileReaderFormat* (*ReaderFormatConstructor)(Read*);
 
         ReaderFormatConstructor format_constructor;
 

@@ -71,6 +71,12 @@ namespace usg
     /*! Channel count can be 0,1,2,3 or 4 only. ie max number of channels is 4.
     */
     virtual int32_t  numChannels()     const { return 0; }
+    /*! The UV offset for this image in UV space.
+    */
+    virtual fdk::Vec2f uvTranslate() const { return fdk::Vec2f(0.0f, 0.0f); }
+    /*! The UV scaling factor for this image in UV space.
+    */
+    virtual fdk::Vec2f uvScale() const { return fdk::Vec2f(1.0f, 1.0f); }
 
     //----------------------------------------------------------
 

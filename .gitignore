@@ -116,6 +116,5 @@ Thumbs.db
 # Preserved Repositories & CI Stubs
 # ==============================================================================
 !.github/ndk/**
-.github/ndk/*/*/include/
 
 

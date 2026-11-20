@@ -40,6 +40,7 @@ namespace DD {
         AllNormal,             //!< User can select any channel normally
         InputOnly,             //!< Users can only select node input channels
         InternalOnly,          //!< Users can only select internally-created node channels
+        InternalOnlyEditing,   //!< Users can select or edit internally-created node channels
       };
 
       //! Set the selection handling before the Widget is constructed

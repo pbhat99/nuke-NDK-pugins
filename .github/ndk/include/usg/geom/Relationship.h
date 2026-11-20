@@ -4,6 +4,7 @@
 #define USG_GEOM_RELATIONSHIP_H
 
 #include "usg/geom/Attribute.h"
+#include "usg/geom/ListPosition.h"
 
 #include <memory>
 
@@ -86,7 +87,10 @@ namespace usg
     //! Full path including the Prim parent.
     Path                getPath() const;
 
-    //! Returns the display name of the attribute
+    //! Returns a hash of the whole relationship.
+    fdk::Hash           getHash() const;
+
+    //! Returns the display name of the relationship.
     std::string getDisplayName() const;
 
     //! Sets if Relationship is custom or not
@@ -115,7 +119,7 @@ namespace usg
     bool getCustomData(const std::string& key, Value& value) const;
 
     //! Returns the relationship's custom data.
-    CustomDataRef getCustomData() const;
+    ValueDictionaryRef getCustomData() const;
 
   public:
     //------------------------------------------------------
@@ -133,6 +137,12 @@ namespace usg
 
     //! Retrieves the relationship's target paths.
     PathArray getTargets() const;
+
+    //! Adds a target path to the relationship at the specified position.
+    void      addTarget(const Path& targetPath, const ListPosition position = ListPosition::PrependBack);
+
+    //! Removes a target path from the relationship.
+    void      removeTarget(const Path& targetPath);
 
 
     //------------------------------------------------------

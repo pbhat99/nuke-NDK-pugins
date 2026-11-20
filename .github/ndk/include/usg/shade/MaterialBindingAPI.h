@@ -1,42 +1,32 @@
 // Copyright (c) 2022 The Foundry Visionmongers Ltd. All Rights Reserved.
 
-// This is automatically-generated code.
-// You may add custom code between the --(BEGIN CUSTOM CODE)-- and --(END CUSTOM CODE)-- markers.
-// Code added anywhere else will be destroyed when the code is generated.
-
 #ifndef USG_SHADE_MATERIALBINDINGAPI_H
 #define USG_SHADE_MATERIALBINDINGAPI_H
 
-#include "usg/api.h"
-
 #include "usg/geom/Prim.h"
-#include "usg/geom/MaterialPrim.h"
+#include "usg/shade/ShadeTokens.h"
 
-
-namespace usg {
-namespace shade {
-
-  // class MaterialBindingAPI
-
+namespace usg::shade {
   class USG_API MaterialBindingAPI {
   public:
+    class Impl;
+
     MaterialBindingAPI();
-    MaterialBindingAPI(const Prim& prim);
-    ~MaterialBindingAPI();
+    explicit MaterialBindingAPI(const Prim& prim);
+    ~MaterialBindingAPI() = default;
+
+    explicit operator bool() const;
+
+    static bool isValidPrim(const Prim& prim) { return prim.isValid(); }
 
     bool validate();
-    static bool isValidPrim(const Prim& prim);
-    explicit operator bool() const { return isValidPrim(_prim); }
+    void apply() const;
+    Relationship computeBoundMaterial(const Token& purpose = ShadeTokens.purposes.allPurpose, bool supportLegacyBindings = true) const;
 
-    void apply();
-
-    // --(BEGIN CUSTOM CODE)--
-    // --(END CUSTOM CODE)--
-  protected:
-    Prim _prim;
+  private:
+    std::unique_ptr<Impl, void(*)(Impl*)> _pImpl;
   };
 
-}
 }
 
 #endif

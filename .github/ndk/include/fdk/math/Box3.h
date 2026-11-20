@@ -1000,10 +1000,6 @@ namespace fdk {
     }
   }
 
-  extern template class FDK_API Box3<fdk::half>;
-  extern template class FDK_API Box3<int>;
-  extern template class FDK_API Box3<float>;
-  extern template class FDK_API Box3<double>;
 }
 
 

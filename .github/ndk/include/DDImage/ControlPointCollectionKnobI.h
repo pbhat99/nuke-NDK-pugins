@@ -14,7 +14,7 @@ namespace DD
 {
   namespace Image
   {
-    class ConvolveArray;
+    struct ConvolveArray;
 
     class DDImage_API ControlPointCollectionInterface
     {
@@ -279,6 +279,7 @@ namespace DD
       virtual void updateAnimationVisibility( bool visible ) = 0;
       
       virtual void append(DD::Image::Hash& hash, const DD::Image::OutputContext* context = nullptr) = 0;
+      virtual DD::Image::Hash editVersionHash() const = 0;
       
       virtual void changed() = 0;
       

@@ -98,6 +98,9 @@ namespace usg {
                        const Path& newPrefix,
                        bool fixTargetPaths = true) const;
 
+    //! Fill prefixes with up to numPrefixes prefixes of this path. If 0 fill with all prefixes
+    void getPrefixes(std::vector<Path>& prefixes, size_t numPrefixes=0) const;
+
     //---------------------------------------------------
 
     bool operator==(const Path& rhs) const;
@@ -125,6 +128,9 @@ namespace usg {
     static bool IsValidPathString(const std::string& pathString, std::string* errorMsg = nullptr);
 
     static const Path& AbsoluteRootPath();
+    
+    //! Remove all elements of paths that are prefixed by other elements in paths.
+    static void RemoveDescendentPaths(std::vector<Path>* paths);
 
   public:
     //! Returns the index of the underlying handle. For internal use only!

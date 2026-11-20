@@ -46,7 +46,8 @@ namespace DD
         bool          earlyStore = false,
         const char*   durationName = "shutter",
         const char*   offsetTypeName = "shutteroffset",
-        const char*   customOffsetName = "shuttercustomoffset"
+        const char*   customOffsetName = "shuttercustomoffset",
+        const char*   labelPrefix = "Shutter"
         );
 
       /** The duration */
@@ -75,6 +76,9 @@ namespace DD
         hash.append(_offset);
         hash.append(_customOffset);
       }
+
+      /** Enables or disables the shutter controls knobs */
+      void enable(bool enable);
     };
   }
 }

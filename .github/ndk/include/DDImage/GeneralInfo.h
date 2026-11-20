@@ -1,92 +1,77 @@
 #ifndef DDImage_GeneralInfo_h
 #define DDImage_GeneralInfo_h
 
-#include "DDImage_API.h"
+#include "DDImage/DDImage_API.h"
 
 namespace DD
 {
   namespace Image
   {
-
+    class Op;
     typedef int FrameRange[2];  
 
     //! Base class for defining a time bounded region
     class DDImage_API GeneralInfo
     {
-      int first_frame_;
-      int last_frame_;
-
     public:
-      GeneralInfo() : first_frame_(1), last_frame_(1) { }
+      //! Copy GeneralInfo values from another.
+      //! If all GeneralInfo params are desired use this method vs. copying individual parameters
+      //! so future additions to this class are automatically handled.
+      void copyGeneralInfo(const GeneralInfo& from);
 
-      /// get the first frame in the range
-      int firstFrame() const
+
+      //! First frame in the range.
+      int firstFrame() const { return _firstFrame; }
+
+      //! Last frame in the range.
+      int lastFrame() const { return _lastFrame; }
+
+      //! Set the first frame in the range
+      void setFirstFrame(int first) { _firstFrame = first; }
+
+      //! Set the last frame in the range
+      void setLastFrame(int last) { _lastFrame = last; }
+
+      //! Set both first and last frame.
+      void setFrameRange(int first, int last)
       {
-        return first_frame_;
+        _firstFrame = first;
+        _lastFrame = last;
       }
 
-      /// get the first frame in the range
+      //! Set first and last from a FrameRange array.
+      void setFrameRange(const FrameRange& frameRange) { setFrameRange(frameRange[0], frameRange[1]); }
 
-      /*! \fn int DD::Image::GeneralInfo::first_frame() const
-         First frame in the range of the clip this Iop produces.
-       */
-      int first_frame() const
-      {
-        return first_frame_;
-      }
 
-      /// get the last frame in the range
-      int lastFrame() const
-      {
-        return last_frame_;
-      }
+      //--------------------------------------------------------------
+      // Older methods, please use new methods above.
 
-      /// get the last frame in the range
+      //! first_frame() has been deprecated, use firstFrame() instead.
+      int first_frame() const { return firstFrame(); }
+      //! last_frame() has been deprecated, use lastFrame() instead.
+      int last_frame() const { return lastFrame(); }
+      //! first_frame(int) has been deprecated, use setFirstFrame(int) instead.
+      void first_frame(int v) { setFirstFrame(v); }
+      //! last_frame(int) has been deprecated, use setLastFrame(int) instead.
+      void last_frame(int v) { setLastFrame(v); }
 
-      /*! \fn int DD::Image::GeneralInfo::last_frame() const
-         Last frame in the range of the clip this Iop produces.
-       */
-      int last_frame() const
-      {
-        return last_frame_;
-      }
+    private:
+      int _firstFrame = 1;
+      int _lastFrame = 1;
 
-      /// set the first frame in the range
-      void setFirstFrame(int v)
-      {
-        first_frame_ = v;
-      }
-
-      /// set the last frame in the range
-      void setLastFrame(int v)
-      {
-        last_frame_ = v;
-      }
-
-      /// set the first frame in the range
-      void first_frame(int v)
-      {
-        first_frame_ = v;
-      }
-
-      /// set the last frame in the range
-      void last_frame(int v)
-      {
-        last_frame_ = v;
-      }
-
-      void setFrameRange(FrameRange frameRange)
-      {
-        first_frame_ = frameRange[0];
-        last_frame_ = frameRange[1];
-      }
     };
 
     class DDImage_API GeneralInfoProvider
     {
     public:
       virtual ~GeneralInfoProvider();
-      //! Returns the GeneralInfo with the first and last frames.
+
+      //! Returns the GeneralInfo.
+      //!
+      //! Warning! This will only return the local info for the provider Op which may not include
+      //! modifications applied by non-Op nodes like FrameRange and TimeOffset - use with caution.
+      //!
+      //! Must implement.
       virtual const GeneralInfo& generalInfo() const = 0;
     };
   }

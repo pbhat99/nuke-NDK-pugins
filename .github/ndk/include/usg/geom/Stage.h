@@ -37,10 +37,10 @@ namespace usg
     //! A Structure for passing load rules to the stage
     typedef std::vector<std::pair<Path, LoadRule>> LoadRules;
 
-    //! Creates a new Stage from the session layer.
+    //! Creates a new Stage from the root layer.
     //! If \a compose_state is provided it's copied into the Stage::Impl and
     //! retrievable via Stage::composeState().
-    static StageRef Create(const LayerRef&  sessionLayer,
+    static StageRef Create(const LayerRef&  rootLayer,
                            const fdk::Hash* composeState = nullptr,
                            bool             loadAll = true);
 
@@ -55,7 +55,7 @@ namespace usg
     //! Creates a new stage from the given root layer limiting its population
     //! to the prims provided by \a maskedPaths. If \a composeState is provided
     //! it's copied into the Stage::Impl and retrievable via Stage::composeState().
-    static StageRef CreateMasked(const LayerRef& sessionLayer,
+    static StageRef CreateMasked(const LayerRef& rootLayer,
                                  const PathArray& maskedPaths,
                                  const fdk::Hash* composeState = nullptr,
                                  bool loadAll = true);
@@ -63,10 +63,22 @@ namespace usg
     static StageRef CreateInMemory(bool loadAll = true, const std::string& arResolverContext = "");
     static StageRef
     CreateInMemory(bool loadAll,
-                  const std::vector<std::pair<std::string, std::string>>& arResolverContexts);
+                   const std::vector<std::pair<std::string, std::string>>& arResolverContexts);
 
     //! Creates a new Stage from the given file path
     static StageRef Open(const std::string& filePath);
+
+    //! Creates a new Stage from the given file path, limiting its population to
+    //! the prims provided by \a maskedPaths.
+    static StageRef OpenMasked(const std::string& filePath,
+                               const PathArray&   maskedPaths,
+                               bool               loadAll = true);
+
+    //! Same, but accepts an ArResolverContext identifier.
+    static StageRef OpenMasked(const std::string& filePath,
+                               const std::string& arResolverContext,
+                               const PathArray&   maskedPaths,
+                               bool               loadAll = true);
 
     //------------------------------------------------------
 
@@ -167,6 +179,9 @@ namespace usg
     //! This is useful for isolating prims.
     void setPopulationMask(const PathArray& primPaths, MaskOperation op = MaskOperation::Set);
 
+    //! Retrieve the population masks stored in the stage.
+    PathArray getPopulationMask() const;
+
     //! Mutes and unmutes layers on the stage
     void muteAndUnmuteLayers(const std::vector<std::string> &muteLayers, const std::vector<std::string> &unmuteLayers);
 
@@ -185,6 +200,10 @@ namespace usg
 
     usg::PathArray getPrimPathsByTypeName(const usg::Token& typeName,
                                           bool traverseModelHierarchy = true);
+
+    //! Returns paths of all prims that have the given API schema applied.
+    usg::PathArray getPrimPathsByAPI(const usg::Token& apiSchemaName,
+                                     bool traverseModelHierarchy = true);
 
     //------------------------------------------------------
 
@@ -220,9 +239,6 @@ namespace usg
     bool  exportToString(std::string& text,
                          bool         addComment = true);
 
-    //! Return the attribute representing the 'default parent' from the top-most (strongest) layer.
-    Path  getDefaultParentPath() const;
-
     //------------------------------------------------------
 
     //! Start of active time sample range.
@@ -251,6 +267,13 @@ namespace usg
     // Resolves the given identifier based on the Stage's current ArResolverContext 
     // and the layer of its EditTarget as an anchor for relative references.
     std::string resolveIdentifierToEditTarget(const std::string& identifier);
+
+    //! Updates a stage by copying from fromStage. Returns the updated stage. This may not be the stage that was
+    //! passed in, as sometimes the stage needs to be recreated if the asset resolver context changes. \a stage
+    //! can be null, in which case a new stage will be created. The copied stage will contain copies of the root layers
+    //! of \a fromStage and the copying is done in such a way that the minimum number of stage notifications will
+    //! be issued.
+    static StageRef UpdateStage(StageRef& stage, const StageRef& fromStage);
 
   public:
     //------------------------------------------------------
@@ -302,13 +325,15 @@ namespace usg
   public:
     class ChangedObjects {
     public:
+      using PathPairVector = std::vector<std::pair<Path, Path>>;
       virtual ~ChangedObjects() {}
       virtual PathArray getChangedPaths() const = 0;
       virtual PathArray getChangedInfoPaths() const = 0;
       virtual TokenArray getChangedFields(const Path& path) const = 0;
+      virtual PathPairVector getRenamedPaths() const { return {}; }
     };
 
-    StageNotifications(const StageRef& stage);
+    explicit StageNotifications(const StageRef& stage, bool trackRenames = false);
     virtual ~StageNotifications();
 
     virtual void handleObjectsChanged(const ChangedObjects& changedObjects);

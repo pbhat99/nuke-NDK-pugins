@@ -7,8 +7,14 @@
 #include <set>
 #include <stddef.h>
 #include <vector>
+#include <cstring>  // for std::memcpy
 
 #include "DDImage/DDImage_API.h"
+#include "DDImage/Deprecation.h"
+#include "DDImage/ValueProvider.h"
+#include "usg/base/Value.h"
+
+#include "fdk/math/Vec3.h"
 
 namespace DD {
   namespace Image {
@@ -17,33 +23,8 @@ namespace DD {
     using Knob_Callback = Knob_Closure&;
     class OutputContext;
 
-
-    class DDImage_API ArrayKnobI
+    class DDImage_API ArrayKnobI : public ValueProvidableI
     {
-    public:
-      //! Interface to provide facility for 'output knobs', whose values are not
-      //! stored in the backend, but synthesised on demand from other values. 
-      //! To create an output knob, implement this interface, create an
-      //! Array_Knob and call ->setValueProvider() on it pointing at your
-      //! implementation of the interface.
-      class DDImage_API ValueProvider
-      {
-      public:
-        //! This function should return true if the knob is presently an output knob.
-        //! This allows this functionality to be toggled on/off without (with a bool knob for example)
-        //! without having to call ->setValueProvider() after the initial setup.
-        virtual bool provideValuesEnabled(const ArrayKnobI* arrayKnob, const OutputContext& oc) const = 0;
-
-        //! This function should return the values to be displayed in the output knob.
-        //! The vector must match the array_size() of the Array_Knob.
-        virtual std::vector<double> provideValues(const ArrayKnobI* arrayKnob, const OutputContext& oc) const = 0;
-
-        virtual ~ValueProvider() { }
-      };
-
-      virtual void setValueProvider(ValueProvider* valueProvider) = 0;
-
-
     public:
       virtual ~ArrayKnobI();
 
@@ -76,6 +57,9 @@ namespace DD {
       //! If OutputContext is null then Knob::uiContext() will be used.
       virtual const std::vector<double>& array_at(const OutputContext* context = nullptr) const = 0;
 
+      //! Return the knob's default values.
+      virtual const std::vector<double>& getDefaultValues() const = 0;
+
       //! Match all animation keys and expressions from another Array Knob to this one. This will completely
       //! replace this knob's current values, animation and views with those from the source knob.
       //! This will add and remove keys and views as appropriate
@@ -84,11 +68,37 @@ namespace DD {
     };
 
 
-    //! set the valueProvider on the most recently made Knob.  if f.makeKnobs() is not true,
-    //! or the that knob is not an ArrayKnobI, is a no-op.  For calling from knobs(Knob_Callback)
-    //! like calls to SetFlags()
-    DDImage_API void SetValueProvider(Knob_Callback f, ArrayKnobI::ValueProvider* valueProvider);
 
+    //----------------------------------------------------------------
+
+
+    struct DDImage_API ArrayKnobRef
+    {
+      Knob*       knob;       //!< Must be an ArrayKnob
+      uint32_t    channel;    //!< Array channel index to target
+      fdk::Vec3d  xform;      //!< Offset (xform.x), scale (xform.y), shift (xform.z) to apply to value
+
+      ArrayKnobRef() : knob(nullptr), channel(0), xform(0.0, 1.0, 0.0) {}
+      ArrayKnobRef(Knob* k, double scale = 1.0) : knob(k), channel(0), xform(0.0, scale, 0.0) {}
+      ArrayKnobRef(Knob* k, const fdk::Vec3d& x) : knob(k), channel(0), xform(x) {}
+      ArrayKnobRef(Knob* k, uint32_t chan, double scale) : knob(k), channel(chan), xform(0.0, scale, 0.0) {}
+      ArrayKnobRef(Knob* k, uint32_t chan, const fdk::Vec3d& x) : knob(k), channel(chan), xform(x) {}
+
+      //! Apply the offset/scale/shift to value as ((v + offset) * scale) + shift
+      double  applyTransform(double v) const { return (v + xform.x) * xform.y + xform.z; }
+
+      //! Extract a single ArrayKnob channel double at the optional context with transform applied.
+      //! If the Knob, ArrayKnob, or the channel is invalid then \a defaultVal is returned.
+      double  get(double defaultVal, const OutputContext* context = nullptr) const;
+
+      //! Same, but extracts a single usg::Value from the Knob.
+      //! \a valueType is required and defines the type of usg::Value returned, and the casting
+      //! of the ArrayKnob double to the correct data type.
+      usg::Value  getValue(usg::Value::Type valueType, double defaultVal, const OutputContext* context = nullptr) const;
+
+    };
+
+    using ArrayKnobRefList = std::vector<ArrayKnobRef>;
 
 
   }

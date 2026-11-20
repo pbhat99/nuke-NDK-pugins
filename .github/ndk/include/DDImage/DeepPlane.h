@@ -198,8 +198,9 @@ namespace DD {
       void clear()
       {
         _idx = 0;
-        if (_var)
-          _data.resize(0);
+        if (_var) {
+          _data.clear();
+        }
       }
 
 

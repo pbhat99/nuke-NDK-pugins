@@ -4,7 +4,7 @@
 #define DDIMAGE_GSVKNOBI_H
 
 #include "DDImage/DDImage_API.h"
-#include "DDImage/GsvSet.h"
+#include "ndk/graph/GsvTypes.h"
 
 #include <optional>
 #include <string>
@@ -36,13 +36,13 @@ namespace DD {
       virtual bool setGsvValue(const std::string& path, const std::string& value) = 0;
 
       //! Returns the GsvSets stored in the knob.
-      virtual const GsvSets& getValue() const = 0;
+      virtual const ndk::GsvSets& getValue() const = 0;
 
       //! Sets the knob data. This will set the model if the group that owns
       //! this knob is attached and its entry exists in the model. If the
       //! groups isn't yet attached, the knob values will be set when the
       //! attachment happens.
-      virtual bool setValue(const GsvSets& data) = 0;
+      virtual bool setValue(const ndk::GsvSets& data) = 0;
 
       //! Removes a GSV with the given path.
       virtual bool removeGsv(const std::string& path) = 0;
@@ -64,6 +64,9 @@ namespace DD {
       //! path i.e. the path must include the GsvSet name when checking for a
       //! variable in the __default__ variable set.
       virtual bool contains(const std::string& path) const = 0;
+
+      //! Returns true if \a path to a GSV set exists relative to the knob.
+      virtual bool containsGsvSet(const std::string& path) const = 0;
     };
   }
 }

@@ -41,7 +41,7 @@ namespace DD
 
         //! Prim filtering will be done in subclass's secondaryFilterPrimPaths()
         //! unless filter argument is a non-null pointer.
-        ModifyEngine(Op* parent, FilterPrimsGeomEngineI* filter = nullptr)
+        ModifyEngine(GeomOpNode* parent, FilterPrimsGeomEngineI* filter = nullptr)
         : GeomOpEngine(parent)
         , _modifySubEngine(this, this)
         {
@@ -137,10 +137,12 @@ namespace DD
       //-------------------------------------------------------------------------
 
 
-      ModifyGeomOp(Node*                 node,
-                   GeomOpEngine::Builder engine_ctor,
-                   std::string_view filterMask = "/*",
-                   std::string_view maskKnobName = "mask_patterns");
+      ModifyGeomOp(Node*               node,
+                   GeomOpEngineBuilder engineBuilder,
+                   std::string_view filterMask = "{default}",
+                   std::string_view maskKnobName = "mask_patterns",
+                   std::string_view injectKnobName = "inject_mask"
+                   ); // --- IGNORE ---
 
       /*! Adds standard scenegraph filter knobs.
           Subclasses can override this to extend the knob set.

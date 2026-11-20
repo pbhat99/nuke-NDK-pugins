@@ -8,6 +8,7 @@
 #include "usg/base/Token.h"
 
 #include <memory>
+#include <string>
 
 namespace usg
 {
@@ -34,12 +35,16 @@ class USG_API ShaderNode
 
   Token getContext() const;
   Token getIdentifier() const;
+  // Returns std::string rather than Token for performance and to avoid a Token->string round-trip
+  // at the USD call site.
+  std::string getName() const;
 
   std::vector<Token> getInputNames() const;
   std::vector<Token> getOutputNames() const;
   ShaderProperty getShaderInput(const Token& inputName) const;
   ShaderProperty getShaderOutput(const Token& outputName) const;
   fdk::KeyValueMap getMetadata() const;
+  Token getCategory() const;
 
   protected:
   std::unique_ptr<ShaderNodeHandle, void (*)(ShaderNodeHandle*)> _pImpl;
@@ -58,7 +63,10 @@ public:
   std::vector<Token> getAllNodeSourceTypes() const;
   std::vector<Token> getNodeIdentifiers() const;
 
+  std::vector<ShaderNode> getShaderNodesByName(const Token& name) const;
+
   ShaderNode getShaderNodeByIdentifier(const Token& identifier) const;
+  std::vector<ShaderNode> getShaderNodesByIdentifier(const Token& identifier) const;
   ShaderNode getShaderNodeByIdentifierAndType(const Token& identifier, const Token& type) const;
 
   static ShaderRegistry getInstance();

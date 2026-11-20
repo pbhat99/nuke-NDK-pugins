@@ -28,7 +28,7 @@ namespace DD
         void enable(bool enable);
       
       private:
-        void setEnabled(bool enable);
+        void updateUI();
         void setOperation(SnapOperation operation);
 
       private:
@@ -63,7 +63,7 @@ namespace DD
         Knob* _rotateKnob = nullptr;
         Knob* _customKnob = nullptr;
 
-        bool _allowInternalEnabling = true;
+        bool _internallyEnabled = true;
         bool _enabled = true;
     };
   }

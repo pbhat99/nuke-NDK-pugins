@@ -1296,7 +1296,10 @@ function Invoke-ExtractNDK {
         $targetWinFolder = Join-Path $winNdkDest $target.FolderTag
 
         if (Test-Path $srcInclude) {
-            Write-Host "    Copying headers to $includeDest ..." -ForegroundColor Gray
+            $destVerInclude = Join-Path $targetWinFolder "include"
+            New-Item -ItemType Directory -Path $destVerInclude -Force | Out-Null
+            Write-Host "    Copying headers to version folder $destVerInclude ..." -ForegroundColor Gray
+            Copy-Item -Path "$srcInclude\*" -Destination $destVerInclude -Recurse -Force
             Copy-Item -Path "$srcInclude\*" -Destination $includeDest -Recurse -Force
             Write-Host "    [OK] Headers synced." -ForegroundColor Green
         } else {

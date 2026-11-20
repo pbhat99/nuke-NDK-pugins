@@ -6,6 +6,7 @@
 #include "usg/api.h"
 #include "usg/base/Array.h"
 
+#include <cstdint>
 #include <iosfwd>
 #include <string>
 #include <set>
@@ -69,11 +70,11 @@ namespace usg {
     explicit AssetPath(int handleIndex) : _handle(handleIndex) {}
 
   public:
-      //! Lazily construct an AssetPath when requested. Primarily used for the static AssetPath 
+      //! Lazily construct an AssetPath when requested. Primarily used for the static AssetPath
       // structs.
       class Lazy {
       public:
-        Lazy(const char* text) 
+        Lazy(const char* text)
         : _assetPath(nullptr)
         , _text(text)
         {}

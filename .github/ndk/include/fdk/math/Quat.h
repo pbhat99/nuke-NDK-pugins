@@ -445,10 +445,6 @@ namespace fdk {
     return !(lhs == rhs);
   }
 
-  extern template class FDK_API Quat<fdk::half>;
-  extern template class FDK_API Quat<float>;
-  extern template class FDK_API Quat<double>;
-
 }
 
 #endif

@@ -51,6 +51,18 @@ namespace usg::hd {
       }
     };
     using DirtiedPrimEntries = std::vector<DirtiedPrimEntry>;
+    struct RenamedPrimEntry {
+      Path oldPrimPath;
+      Path newPrimPath;
+
+      RenamedPrimEntry() = default;
+      RenamedPrimEntry(const Path& oldPrimPath, const Path& newPrimPath)
+      : oldPrimPath(oldPrimPath)
+      , newPrimPath(newPrimPath)
+      {
+      }
+    };
+    using RenamedPrimEntries = std::vector<RenamedPrimEntry>;
 
     class Handle;
 

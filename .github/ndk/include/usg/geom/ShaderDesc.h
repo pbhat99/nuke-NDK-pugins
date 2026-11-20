@@ -395,10 +395,6 @@ namespace usg
     //! Return the shader matching the name, or null if not in group.
     ShaderDesc*  getShaderNode(const std::string& shader_node_name) const;
 
-    //! Computes and returns the topology hash for the shader group.
-    fdk::Hash getTopologyHash();
-
-
   private:
     ShaderDescGroup(const ShaderDescGroup&) = delete;
     ShaderDescGroup& operator = (const ShaderDescGroup&) = delete;

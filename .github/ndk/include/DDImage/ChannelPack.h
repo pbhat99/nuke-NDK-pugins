@@ -5,6 +5,8 @@
 
 #include "DDImage/ChannelSet.h"
 
+#include <cstdint>
+
 namespace DD {
   namespace Image {
 

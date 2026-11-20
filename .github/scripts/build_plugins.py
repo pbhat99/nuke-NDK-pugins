@@ -134,7 +134,7 @@ def build_single_plugin(plugin, platform_name, nuke_version, ndk_dir, root_dir):
     print(f"Deploy : {deploy_dir}")
     print(f"{'='*70}")
 
-    ndk_norm = str(ndk_dir).replace("\\", "/")
+    ndk_norm = str(Path(ndk_dir).resolve()).replace("\\", "/")
     cmake_module_dir = str(root / "cmake").replace("\\", "/")
     cmake_args = [
         "cmake",
@@ -164,8 +164,8 @@ def build_single_plugin(plugin, platform_name, nuke_version, ndk_dir, root_dir):
     else: # LINUX
         cmake_args.extend([
             "-G", "Unix Makefiles",
-            "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--unresolved-symbols=ignore-in-shared-libs",
-            "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,--unresolved-symbols=ignore-in-shared-libs"
+            "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--unresolved-symbols=ignore-all",
+            "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,--unresolved-symbols=ignore-all"
         ])
 
     if plugin["id"] == "DeepC":

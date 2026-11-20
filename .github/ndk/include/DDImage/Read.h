@@ -20,7 +20,6 @@ namespace DD
   {
 
     class Reader;
-    class ReaderFormat;
     class ReadImpl;
     class CodecHandler;
 
@@ -80,8 +79,12 @@ namespace DD
     {
     public:
 
+      //! Overridden to allow ops to re-initialise any internal caches
+      //! when they get recycled for a new output context.
+      void _setRecycling(bool recycling) override;
+
       // Provides a handler to the reader specific knobs. The returned
-      // object is usually a ReaderFormat.
+      // object is usually a FileReaderFormat.
       FileHandler* handler() const override;
       
       // Provides a handler to the codec specific knobs. The returned
@@ -118,7 +121,7 @@ namespace DD
 
     protected:
       Reader* _reader;
-      ReaderFormat* _fileformat;
+      FileReaderFormat* _fileformat;
       const Reader::Description* _reader_type;
 
       Op* op() override { return this; }

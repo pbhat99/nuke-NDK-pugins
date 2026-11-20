@@ -3,7 +3,7 @@
 #ifndef USG_GEOM_MATERIALPRIM_H
 #define USG_GEOM_MATERIALPRIM_H
 
-#include "usg/geom/Prim.h"
+#include "usg/geom/NodeGraphPrim.h"
 #include "usg/geom/ShaderPrim.h"
 
 namespace usg
@@ -12,10 +12,8 @@ namespace usg
 
 
   /*! Container of shader nodes and top-level terminal connections.
-
-      TODO: bother with a ShaderNetwork class above this?
   */
-  class USG_API MaterialPrim : public usg::Prim
+  class USG_API MaterialPrim : public usg::NodeGraphPrim
   {
   public:
     //! Default ctor builds an empty (invalid) prim.
@@ -74,9 +72,9 @@ namespace usg
     /*! Build a ShaderDescGroup from this material's graph, sampled at an optional time.
 
         If 'render_target' is not empty it will be prefixed to 'terminal_type' to form
-        the full connection point name. For example if render_target is 'glslfx' and
+        the full connection point name. For example if render_target is 'slr' and
         terminal_type is 'surface' then the full name of the surface output property
-        is 'outputs:glslfx:surface'.
+        is 'outputs:slr:surface'.
 
         Returns 0 if the requested terminal for the render target does not exist, and the
         ShaderDescGroup will be left empty/uninitialized.

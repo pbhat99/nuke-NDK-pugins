@@ -4,6 +4,7 @@
 #define DDIMAGE_AXIS_KNOBI_H
 
 #include "DDImage/DDImage_API.h"
+#include "DDImage/Deprecation.h"
 
 #include "fdk/math/Vec3.h"
 #include "fdk/math/Mat4.h"
@@ -61,6 +62,14 @@ namespace DD
       //! Return the Knob this interface is on. Implementations should just "return this;"
       virtual Knob* baseKnob() = 0;
 
+      virtual Knob* translateKnob() = 0;
+      virtual Knob* rotateKnob() = 0;
+      virtual Knob* scaleKnob() = 0;
+      virtual Knob* uniformScaleKnob() = 0;
+      virtual Knob* skewKnob() = 0;
+      virtual Knob* pivotTranslateKnob() = 0;
+      virtual Knob* pivotRotateKnob() = 0;
+
       //! Return whether a child knob has an expression set.
       virtual bool hasExpression(Transformation knob) const = 0;
 
@@ -87,8 +96,17 @@ namespace DD
       virtual void setPivot(const fdk::Vec3d& pivot_translation) = 0;
       virtual void setPivotRotate(const fdk::Vec3d& pivot_rotate) = 0;
 
-      virtual RotationOrder  rotationOrder(const OutputContext* context = nullptr) const = 0;
-      virtual TransformOrder transformOrder(const OutputContext* context = nullptr) const = 0;
+#if kDDImageVersionMajorNum <= 17
+      mFnDeprecatedInNuke17("rotationOrder(const OutputContext*) has been deprecated, use rotationOrder() instead.")
+      virtual RotationOrder  rotationOrder(const OutputContext* context) const = 0;
+      mFnDeprecatedInNuke17("transformOrder(const OutputContext*) has been deprecated, use transformOrder() instead.")
+      virtual TransformOrder transformOrder(const OutputContext* context) const = 0;
+#else
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 17."
+#endif
+      virtual RotationOrder  rotationOrder() const = 0;
+      virtual TransformOrder transformOrder() const = 0;
+
       virtual double         uniformScale(const OutputContext* context = nullptr) const = 0;
       virtual fdk::Vec3d     translate(const OutputContext* context = nullptr) const = 0;
       virtual fdk::Vec3d     rotate(const OutputContext* context = nullptr) const = 0;

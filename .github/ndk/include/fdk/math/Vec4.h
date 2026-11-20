@@ -761,10 +761,6 @@ namespace fdk {
     dvout = (e01 * T(stdy.x)) + (e02 * static_cast<T>(stdy.y)) - dt;
   }
 
-  extern template class FDK_API Vec4<fdk::half>;
-  extern template class FDK_API Vec4<int>;
-  extern template class FDK_API Vec4<float>;
-  extern template class FDK_API Vec4<double>;
 }
 
 #endif

@@ -14,18 +14,26 @@ import subprocess
 import shutil
 from pathlib import Path
 
+def get_version_include(ndk_root, version):
+    v_clean = version.lower().replace("nuke", "")
+    folder_tag = f"Nuke{v_clean}"
+    cands = [
+        ndk_root / "win" / folder_tag / "include",
+        ndk_root / "win" / f"Nuke{v_clean.split('v')[0]}" / "include" if "v" in v_clean else None,
+        Path(f"C:/Program Files/{folder_tag}/include"),
+        ndk_root / "include"
+    ]
+    for c in cands:
+        if c and c.exists() and (c / "DDImage" / "Op.h").exists():
+            return c
+    return ndk_root / "include"
+
 def setup_ndk(platform_name, version, cache_dir=None):
     root_dir = Path(__file__).resolve().parents[2]
     ndk_root = root_dir / ".github" / "ndk"
     
-    # 1. Base include directory
-    common_include = ndk_root / "include"
-    if not common_include.exists():
-        # Fallback to local Windows Nuke installation if on local machine
-        for cand in [Path("C:/Program Files/Nuke17.1v2/include"), Path("C:/Program Files/Nuke16.0v9/include")]:
-            if cand.exists():
-                shutil.copytree(cand, common_include, dirs_exist_ok=True)
-                break
+    # 1. Base include directory for this version
+    v_inc = get_version_include(ndk_root, version)
 
     # 2. Platform-specific NDK directory
     v_clean = version.lower().replace("nuke", "")
@@ -57,17 +65,17 @@ def setup_ndk(platform_name, version, cache_dir=None):
             sys.exit(1)
 
         # Ensure include/ exists inside target_ndk
-        if common_include.exists() and not (target_ndk / "include").exists():
+        if v_inc.exists() and not (target_ndk / "include").exists():
             try:
-                shutil.copytree(common_include, target_ndk / "include", dirs_exist_ok=True)
+                shutil.copytree(v_inc, target_ndk / "include", dirs_exist_ok=True)
             except Exception as e:
                 print(f"[WARN] Could not copy include: {e}")
 
     elif platform_name == "macOS":
         target_ndk = ndk_root / "mac" / folder_tag
         target_ndk.mkdir(parents=True, exist_ok=True)
-        if common_include.exists() and not (target_ndk / "include").exists():
-            shutil.copytree(common_include, target_ndk / "include", dirs_exist_ok=True)
+        if v_inc.exists() and not (target_ndk / "include").exists():
+            shutil.copytree(v_inc, target_ndk / "include", dirs_exist_ok=True)
         # Create stub libDDImage.dylib and libDDImage.so so all CMake checks succeed
         stub_dylib = target_ndk / "libDDImage.dylib"
         if not stub_dylib.exists():
@@ -87,8 +95,8 @@ def setup_ndk(platform_name, version, cache_dir=None):
     else: # Linux
         target_ndk = ndk_root / "linux" / folder_tag
         target_ndk.mkdir(parents=True, exist_ok=True)
-        if common_include.exists() and not (target_ndk / "include").exists():
-            shutil.copytree(common_include, target_ndk / "include", dirs_exist_ok=True)
+        if v_inc.exists() and not (target_ndk / "include").exists():
+            shutil.copytree(v_inc, target_ndk / "include", dirs_exist_ok=True)
         # Create stub libDDImage.so so CMake find_library and existence checks succeed
         stub_so = target_ndk / "libDDImage.so"
         if not stub_so.exists():

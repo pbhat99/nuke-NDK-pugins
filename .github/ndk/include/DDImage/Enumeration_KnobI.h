@@ -52,6 +52,9 @@ namespace DD
       virtual ~Enumeration_KnobI()
       {
       }
+
+      /** Set whether the menu item at the given index should be usable or greyed out. */
+      virtual void setEnabled(int itemIndex, bool enabled) {};
     };
 
 

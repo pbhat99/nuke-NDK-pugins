@@ -6,8 +6,9 @@
 #include <string>
 
 #include "DDImage/DDImage_API.h"
-#include "DDImage/GraphScope.h"
 #include "DDImage/OutputContext.h"
+
+#include "ndk/graph/GraphScope.h"
 
 namespace DD
 {
@@ -79,8 +80,8 @@ namespace DD
                                       U64 graphScopeHash;
                                       int channel;
                                       double r;
-                                      GraphScopePtr graphScopePtr() {
-                                        return OutputContext::graphScope(GraphScopeId(graphScopeHash));
+                                      ndk::GraphScopePtr graphScopePtr() {
+                                        return OutputContext::graphScope(ndk::GraphScopeId(graphScopeHash));
                                       };
                                     } get_value_at_context;
         struct SetExpressionArg { const char* v;
@@ -379,7 +380,7 @@ namespace DD
         return Data.r;
       }
 
-      double get_value_at_context(double time, int view, const GraphScopePtr graphScope, int channel = 0) const
+      double get_value_at_context(double time, int view, const ndk::GraphScopePtr graphScope, int channel = 0) const
       {
         ValueStuffArg::GetValueAtContextArg Data = { time, view, graphScope->hash().value(), channel, 0.0 };
         value_stuff( W_GETVALUEATCONTEXT, reinterpret_cast<ValueStuffArg*>(&Data));

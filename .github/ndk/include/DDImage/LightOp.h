@@ -1,69 +1,50 @@
-//------------------------------------------------------------------------------
-// DDImage/LightOp.h
-//
 // Copyright (c) 2009 The Foundry Visionmongers Ltd.  All Rights Reserved.
-//------------------------------------------------------------------------------
 
-#ifndef DDImage_LightOp_h
-#define DDImage_LightOp_h
+#ifndef DDIMAGE_LIGHTOP_H
+#define DDIMAGE_LIGHTOP_H
 
-#if kDDImageVersionMajorNum <= 16
+#if kDDImageVersionMajorNum <= 17
 #include "DDImage/CameraOp.h"
 #include "DDImage/TextureFilter.h"
 #include "DDImage/Pixel.h"
 #else
-#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
 #include "DDImage/AxisOp.h"
 #endif
-#include "DDImage/MaterialOpI.h"
 
 
 namespace DD
 {
   namespace Image
   {
-#if kDDImageVersionMajorNum <= 16
+#if kDDImageVersionMajorNum <= 17
     class LightContext;
     class rPrimitive;
     class VertexContext;
 #else
-#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
 #endif
 
     /*! \class DD::Image::LightOp
         \brief LightOp defines a 3D light.
-
-        LightOps are containers for holding parameters and do not implement the actual
-        lighting calculations. They export their values into prims added to a 3D scene
-        (a USD stage) via the ScenePrimExporterOpI interface methods.
-
-        Lighting calculations are provided by shaders in the destination renderers like
-        Storm and ScanlineRender2 which translate the scene prims into the actual light
-        implementations.
-     */
-    /*!
-       Light base class which defaults to point source lighting with falloff.
      */
     class DDImage_API LightOp :
-#if kDDImageVersionMajorNum <= 16
-                                public CameraOp,
+#if kDDImageVersionMajorNum <= 17
+                                public CameraOp
 #else
-#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
-                                public AxisOp,
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
+                                public AxisOp
 #endif
-                                public MaterialOpI
     {
     protected:
-#if kDDImageVersionMajorNum <= 16
+      fdk::Vec3d _color;                  //!< Color of the light
+#if kDDImageVersionMajorNum <= 17
+      mFnDeprecatedLegacy3DSystemInNuke14("color_ has been deprecated, use _color instead.")
+      Pixel color_;                 //!< Use Vec3f _color instead
       //----------------------------------------------------------------------------
       // Deprecation unions to retain backward-compatibility in Nuke 16
       // The old var names will disappear in a Nuke major rev after 16
       //----------------------------------------------------------------------------
-      union {
-        Pixel _color;               //!< Color of the light (can be >3 channels!)
-        mFnDeprecatedLegacy3DSystemInNuke14("color_ has been deprecated, use _color instead.")
-        Pixel color_;               //!< Use _color instead
-      };
       union {
         double _intensity;          //!< Global intensity
         mFnDeprecatedLegacy3DSystemInNuke14("intensity_ has been deprecated, use _intensity instead.")
@@ -102,8 +83,7 @@ namespace DD
       mFnDeprecatedLegacy3DSystemInNuke14("depthmap_width_ has been deprecated.")
       int   depthmap_width_;        //!< Size in pixels of shadow buffer
 #else
-#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
-      fdk::Vec3d _color;                  //!< Color of the light
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
       double     _intensity;              //!< Global intensity
 #endif
       bool       _enableColorTemperature; //!< Enables color temperature
@@ -113,9 +93,9 @@ namespace DD
       double     _diffuse;                //!< Difuse multiplier
       double     _specular;               //!< Specular multiplier
       //
-#if kDDImageVersionMajorNum <= 16
+#if kDDImageVersionMajorNum <= 17
 #else
-#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
       bool       _castShadows;            //!< Whether light casts shadows
 #endif
       Channel    _shadowMaskChannel;      //!< Output the shadow mask to this channel
@@ -128,46 +108,22 @@ namespace DD
       const LightOp* lightOp() const override { return this; }
             LightOp* lightOp()       override { return this; }
 
+      //! Retrieve a version of this LightOp at a specific OutputContext.
+      LightOp* getLightOpAt(const OutputContext& context) { return BuildOpAt(this, context)->lightOp(); }
+
       //! Set the default color of a light node.
       unsigned node_color() const override { return 0xFFFF9A00; }
 
       //--------------------------------------------
 
-      //! Return this LightOp cast to the MaterialOpI interface. Must implement.
-#if kDDImageVersionMajorNum <= 16
-      virtual MaterialOpI*  asMaterialOp() { return nullptr; }
-#else
-#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
-      virtual MaterialOpI*  asMaterialOp() = 0;
-#endif
-
-      //! The 'shader node' name for LightOps is its full prim path, so this method
-      //! returns 'LightOp::exportBasePrimPath()'.
-      //! The \a target_renderer arg is ignored.
-      std::string  getShaderNodeName(const usg::Token& target_renderer = usg::Token()) override;
-
-      //! Adds 'LightAPI' to list.
-      //! Returns a list of API's this output shader must implement.
-      usg::TokenArray getAppliedApiSchemas() const override;
-
-      //! Builds a path from AxisOp::exportBasePrimPath(), appending the Node displayName()
-      //! to use as the light schema's prim name. The light schema's type name comes from
-      //! \a getOutputSchema().
-      //!
-      //! For example if the Node class name is 'MySpotlight_v4' we want it to show up in the
-      //! scenegraph as 'MySpotlight', while the light schema name may be 'DiskLight'.
-      virtual usg::Path  exportLightSchemaPrimPath() const;
-
-      //--------------------------------------------
-
-#if kDDImageVersionMajorNum <= 16
+#if kDDImageVersionMajorNum <= 17
       const Pixel& color() const { return color_; }
       void setColor(const Pixel& color) { color_ = color; }
 #else
-#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
       const fdk::Vec3d& color() const { return _color; }
-      void setColor(const fdk::Vec3d& color) { _color = color; }
 #endif
+      void setColor(const fdk::Vec3d& color) { _color = color; }
 
       double intensity() const { return _intensity; }
       void setIntensity(double v) { _intensity = v; }
@@ -197,10 +153,10 @@ namespace DD
 
       //! Whether the light has a delta shaped distribution (point/spot/direct lights)
       //! Must implement.
-#if kDDImageVersionMajorNum <= 16
+#if kDDImageVersionMajorNum <= 17
       virtual bool isDeltaLight() const { return true; }
 #else
-#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
       virtual bool isDeltaLight() const = 0;
 #endif
 
@@ -218,12 +174,10 @@ namespace DD
     public:
       void _validate(bool for_real) override;
 
+#if kDDImageVersionMajorNum <= 17
       //! Default knobs puts the transform controls on the front tab, and
       //! the projection, shutter, and lens controls on tab 'Projection'.
       void knobs(Knob_Callback) override;
-
-      //! Adds the standard color/intensity/exposure knobs.
-      void addColorKnobs(Knob_Callback);
 
       //!
       int knob_changed(Knob*) override;
@@ -239,14 +193,6 @@ namespace DD
       virtual void shade_GL(ViewerContext*, int light_num);
 
 
-    protected:
-      //! ScenePrimExporterOpI: Subclass portion of exportScenePrims().
-      void _exportScenePrims(usg::LayerRef&            exportLayer,
-                             int32_t                   exportMode,
-                             const fdk::FrameValueSet& sampleFrames = fdk::FrameValueSet()) const override;
-
-
-#if kDDImageVersionMajorNum <= 16
     private:
       //! Clamped values from knob controls.
       int _samples;
@@ -258,11 +204,11 @@ namespace DD
       //----------------------------------------------------------------------------
       mFnDeprecatedLegacy3DSystemInNuke14("request() has been deprecated, use requestTextures().")
         virtual void request(ChannelMask, int count);
-      mFnDeprecatedLegacy3DSystemInNuke14("color_knobs() has been deprecated, use addColorKnobs() instead.")
+      mFnDeprecatedLegacy3DSystemInNuke14("color_knobs() has been deprecated, use LightSceneOp::addColorKnobs() instead.")
         void color_knobs(Knob_Callback);
       mFnDeprecatedLegacy3DSystemInNuke14("attenuation_knobs() has been deprecated.")
         void attenuation_knobs(Knob_Callback);
-      mFnDeprecatedLegacy3DSystemInNuke14("shadow_knobs() has been deprecated, use addShadowKnobs() instead.")
+      mFnDeprecatedLegacy3DSystemInNuke14("shadow_knobs() has been deprecated, use LightSceneOp::addShadowKnobs() instead.")
         void shadow_knobs(Knob_Callback);
       //-----------------------------
       mFnDeprecatedLegacy3DSystemInNuke14("color(Pixel) has been deprecated, use setColor() instead.")
@@ -361,7 +307,7 @@ namespace DD
                                     const Vector3&       surfP,
                                     Pixel&               out);
 #else
-#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
 #endif
     };
 

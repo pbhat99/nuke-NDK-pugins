@@ -3,8 +3,10 @@
 #ifndef USG_GEOM_GEOMLAYER_H
 #define USG_GEOM_GEOMLAYER_H
 
+#include "usg/base/ArrayTypes.h"
 #include "usg/geom/Prim.h"
 
+#include <map>
 #include <memory>
 
 namespace usg {
@@ -172,32 +174,29 @@ namespace usg {
     //! Sets a value in the custom data for this layer
     void   setCustomLayerData(const Token& key, const Value& value);
 
+    //! Sets a value in the custom data for this layer
+    void   setCustomLayerData(const Token& key, const ValueDictionaryRef& value) const;
+
     //! Returns the value for \a key in the custom data for this l;ayer.
     Value  getCustomLayerData(const Token& key) const;
 
-    //! Sets the list of modified paths for this layer. This can be used by ops to signal the last-modified prims to downstream ops.
-    void       setModifiedPaths(const PathArray& paths);
+    //! Returns the custom layer data dictionary.
+    ValueDictionaryRef getCustomLayerData() const;
 
-    //! Returns the list of modified paths for this layer.
-    PathArray  getModifiedPaths() const;
+    //! Returns true if the layer has a custom layer data dictionary.
+    bool   hasCustomLayerData() const;
 
-    //! Sets the list of created paths for this layer. This can be used by ops to signal the created prims to downstream ops.
-    void       setCreatedPaths(const PathArray& paths);
-
-    //! Returns the list of created paths for this layer.
-    PathArray  getCreatedPaths() const;
-
-    //! Sets the list of default parent path for this layer. This can be used by ops to specify a default parent path for downstream ops.
-    void  setDefaultParentPath(const Path& path);
-
-    //! Returns the list of default parent path for this layer.
-    Path  getDefaultParentPath() const;
+    //! Clears the custom layer data dictionary.
+    void  clearCustomLayerData();
 
     //! Sets the layer's owner.
     void setOwner(const std::string& owner);
     
     //! Gets the layer's owner.
     std::string getOwner() const;
+
+    //! returns true if the layer has an owner.
+    bool hasOwner() const;
 
     //! Clears the layer's owner.
     void clearOwner();
@@ -238,11 +237,23 @@ namespace usg {
     //! Gets the start time code.
     double getStartTimeCode() const;
 
+    //! Returns true if the layer has a start time code.
+    bool hasStartTimeCode() const;
+
+    //! Clear the start time code.
+    void clearStartTimeCode();
+
     //! Sets the end time code.
     void setEndTimeCode(double timeCode);
 
     //! Gets the end time code.
     double getEndTimeCode() const;
+
+    //! Returns true if the layer has an end time code.
+    bool hasEndTimeCode() const;
+
+    ///! Clears the end time code.
+    void clearEndTimeCode();
 
     //! Sets the frames per second.
     void setFramesPerSecond(double framesPerSecond);
@@ -250,11 +261,23 @@ namespace usg {
     //! Gets the frames per second.
     double getFramesPerSecond() const;
 
+    //! Returns true if the layer has a frames per second.
+    bool hasFramesPerSecond() const;
+
+    //! Clears the frames per second.
+    void clearFramesPerSecond();
+
     //! Sets the time codes per second.
     void setTimeCodesPerSecond(double timeCodesPerSecond);
 
     //! Gets the time codes per second.
     double getTimeCodesPerSecond() const;
+
+    //! Returns true if the layer has a time codes per second.
+    bool hasTimeCodesPerSecond() const;
+
+    //! Clears the time codes per second.
+    void clearTimeCodesPerSecond();
 
     //! Sets the frame precision.
     void setFramePrecision(int framePrecision);
@@ -262,23 +285,23 @@ namespace usg {
     //! Gets the frame precision.
     int getFramePrecision() const;
 
+    //! Returns true if the layer has a frame precision.
+    bool hasFramePrecision() const;
+
+    //! Clears the frame precision.
+    void clearFramePrecision();
+
     //! Sets the name of the node which owns this layer.  This can be used to enable the node selection mechanism for custom layers.
     void setOwnerNodeName(const std::string& owner);
 
     //! Returns the name of the node which owns this layer, or an empty string if none.
     std::string getOwnerNodeName() const;
 
-    //! Sets a attribute value in the private layer info prim
-    void setLayerInfoAttribute(const Token& key, const Value& value);
+    //! Sets whether the contents of this layer are selectable. This can be used to disable selection of prims for the selection system.
+    void setSelectable(bool selectable);
 
-    //! Sets a relationship value in the private layer info prim
-    void setLayerInfoRelationship(const Token& key, const PathArray& paths);
-
-    //! Returns the value for \a key in the private layer info prim.
-    Value  getLayerInfoAttribute(const Token& key) const;
-
-    //! Returns the path array for \a key in the private layer info prim.
-    PathArray getLayerInfoRelationship(const Token& key) const;
+    //! Returns the whether the contents of this layer are selectable, defaulting to true if not set.
+    bool getSelectable() const;
 
     //! Fetches the composition asset identifiers for this layer. Returns the number of assets.
     size_t getCompositionAssetDependencies(fdk::StringList& assetIdentifiers) const;
@@ -289,11 +312,37 @@ namespace usg {
     //! Sets the up axis for the layer.
     void setUpAxis(const Token& upAxis);
 
+    //! Returns true if the layer has an up axis.
+    bool hasUpAxis() const;
+
+    //! Clears the up axis.
+    void clearUpAxis();
+
+    //! Returns the expression variables for the layer.
+    //! Returns an empty map if none are authored.
+    //! String and token values are included; other types are silently skipped.
+    void getExpressionVariables(std::map<std::string, std::string>& variables) const;
+
+    //! Sets the expression variables for the layer.
+    void setExpressionVariables(const std::map<std::string, std::string>& variables);
+
+    //! Returns true if the layer has expression variables.
+    bool hasExpressionVariables() const;
+
+    //! Clears the expression variables.
+    void clearExpressionVariables();
+
     //! Returns the meters per unit for the layer. If not set, returns "Y"/
     double getMetersPerUnit() const;
 
     //! Sets the meters per unit for the layer.
     void setMetersPerUnit(const double metersPerUnit);
+
+    //! Returns true if the layer has a meters per unit.
+    bool hasMetersPerUnit() const;
+
+    //! Clears the meters per unit.
+    void clearMetersPerUnit();
 
     //! Add/enable a level of change notification blocking so that a series of prim or property
     //! changes done to the layer can be bundled up as one big change.
@@ -348,6 +397,9 @@ namespace usg {
 
     //! Returns the root prim of the layer
     Prim    getRootPrim() const;
+
+    //! Returns the root prims of the layer
+    std::vector<Prim>    getRootPrims() const;
 
     //! Returns the prim defined at the given path
     Prim    getPrimAtPath(const Path& path) const;
@@ -431,6 +483,17 @@ namespace usg {
     //! Stitches the content of \a weakLayer into this layer
     void stitch(const LayerRef& weakLayer);
 
+  #ifdef WITH_FN_CRATE_CACHE
+    //! Returns Layer as bytes
+    bool serialize(std::vector<char>& dest);
+    bool serialize(UCharArray& dest);
+
+    //! Import Layers from bytes
+    bool deserialize(const char* src, size_t length);
+    bool deserialize(const std::vector<char>& src);
+    bool deserialize(const UCharArray& src);
+  #endif
+
     void copySpec(const Path& path, const LayerRef& targetLayer, const Path& targetPath);
 
     //! Returns a list of paths which may have been modified. This means any prim with a 'def' specifier, or an over with property definitions.
@@ -439,6 +502,8 @@ namespace usg {
     //! Output the contents of the layer to a stream. Calls exportToString().
     void printContents(const char* prefix, std::ostream&) const;
 
+    //! Helper function to detect cycles in layer sublayer hierarchy
+    bool hasCycle(std::string& message) const;
 
   public:
     //------------------------------------------------------
@@ -475,6 +540,32 @@ namespace usg {
   USG_API bool operator == (const Layer& lhs, const Layer& rhs);
   USG_API bool operator != (const Layer& lhs, const Layer& rhs);
 
+  //! RAII helper class to ensure changeBlockPop() is called even if an exception is thrown.
+  //! Usage: LayerChangeBlock block(layer);
+  class LayerChangeBlock
+  {
+  public:
+    explicit LayerChangeBlock(LayerRef layer)
+      : m_layer(std::move(layer))
+    {
+      if (m_layer) {
+        m_layer->changeBlockPush();
+      }
+    }
+
+    ~LayerChangeBlock()
+    {
+      if (m_layer) {
+        m_layer->changeBlockPop();
+      }
+    }
+
+    LayerChangeBlock(const LayerChangeBlock&) = delete;
+    LayerChangeBlock& operator=(const LayerChangeBlock&) = delete;
+
+  private:
+    LayerRef m_layer;
+  };
 
 } // namespace usg
 

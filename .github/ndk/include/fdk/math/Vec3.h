@@ -760,8 +760,8 @@ namespace fdk {
   template<typename T, typename S>
   inline Vec3<T>
   lerpClamped(const Vec3<T>& v0,
-       const Vec3<T>& v1,
-       S              t)
+              const Vec3<T>& v1,
+              S              t)
   {
     if (t < std::numeric_limits<S>::epsilon()) {
       return v0; // before or at first
@@ -777,10 +777,10 @@ namespace fdk {
 
   template<typename T, typename S>
   inline Vec3<T>
-  lerp(const Vec3<T>& v0,
-       const Vec3<T>& v1,
-       S              t,
-       S              invt)
+  lerpClamped(const Vec3<T>& v0,
+              const Vec3<T>& v1,
+              S              t,
+              S              invt)
   {
     if (t < std::numeric_limits<S>::epsilon()) {
       return v0; // before or at first
@@ -988,11 +988,6 @@ namespace fdk {
       prev = cur;
     }
   }
-
-  extern template class FDK_API Vec3<fdk::half>;
-  extern template class FDK_API Vec3<int>;
-  extern template class FDK_API Vec3<float>;
-  extern template class FDK_API Vec3<double>;
 
 }
 

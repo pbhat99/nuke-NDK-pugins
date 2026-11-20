@@ -12,9 +12,9 @@
 #ifndef _usgUSDVersionNumber_h_
 #define _usgUSDVersionNumber_h_
 
-#define kFnUsgUSDVersion "2405"
+#define kFnUsgUSDVersion "2508"
 #define kFnUsgUSDMajorVersion 0
-#define kFnUsgUSDMinorVersion 24
-#define kFnUsgUSDPatchVersion 5
+#define kFnUsgUSDMinorVersion 25
+#define kFnUsgUSDPatchVersion 8
 
 #endif

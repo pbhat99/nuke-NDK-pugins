@@ -143,12 +143,12 @@ namespace DD
       /*! \fn int IopInfoOwner::first_frame() const
          Same as info().first_frame().
        */
-      int first_frame() const { return info().first_frame(); }
+      int first_frame() const { return info().firstFrame(); }
 
       /*! \fn int IopInfoOwner::last_frame() const
          Same as info().last_frame().
        */
-      int last_frame() const { return info().last_frame(); }
+      int last_frame() const { return info().lastFrame(); }
 
       void format(const Format& f) { info_.format(f); }
       void full_size_format(const Format& f) { info_.full_size_format(f); }
@@ -508,6 +508,12 @@ namespace DD
          Most operators assume inputs are not null, so you must connect them yourself.
        */
       Op* default_input(int) const override;
+
+      /*!
+         Returns the default input as a full OpGraphLocation, preserving the
+         graph state (hash) from the generation path.
+       */
+      OpGraphLocation defaultInputConnection(int input) const override;
 
       /*!
          This static function returns the same op that default_input(int) returns.

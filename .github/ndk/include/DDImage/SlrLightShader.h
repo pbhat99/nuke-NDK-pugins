@@ -5,12 +5,39 @@
 
 #include "DDImage/SlrShader.h"
 #include "DDImage/SlrCoShader.h"
-#include "DDImage/SlrPrimInfo.h"
+#include "DDImage/SlrEngineContext.h"
 
 #include "usg/lux/LuxTokens.h" // for light shader convenience
+#include "usg/tools/PathExpression.h"
 
 namespace slr
 {
+
+  //-----------------------------------------------------------------------------
+
+  //! Access these tokens like so: 'slr::LightTokens.falloffAmount'.
+  //!
+  struct DDImage_API LightTokensDef {
+    // Geometry prim tokens:
+    usg::Token::Lazy     castShadow{"slr:castShadow"   }; // Value::Bool
+    usg::Token::Lazy  receiveShadow{"slr:receiveShadow"}; // Value::Bool
+    //
+    // Light shader tokens:
+    usg::Token::Lazy     objectIlluminationMask{"slr:object_illumination_mask"}; // Value::PathExpr
+    usg::Token::Lazy  objectReceiveShadowMask{"slr:object_receive_shadow_mask"}; // Value::String
+    usg::Token::Lazy           shadowChannels{"slr:shadow_channels"           }; // Value::String
+    //
+    usg::Token::Lazy    falloffType{"slr:falloff_type"}; // Value::String
+    //
+    // For DomeLight specifically:
+    usg::Token::Lazy  mirrorImageX{"slr:mirror_image_x"}; // Value::Int
+    usg::Token::Lazy  mirrorImageY{"slr:mirror_image_y"}; // Value::Int
+    usg::Token::Lazy      blurSize{"slr:blur_size"     }; // Value::Float2
+  };
+  extern DDImage_API LightTokensDef LightTokens;
+
+  //-----------------------------------------------------------------------------
+
 
   /*! \class DD::Image::SlrLightShader
   */
@@ -37,6 +64,14 @@ namespace slr
       fdk::Vec3f  illumColor() const { return color * (intensity * exposureFactor()); }
     };
 
+    enum class FalloffType : int32_t
+    {
+      NoFalloff,
+      LinearFalloff,      //!< 1 / distance
+      QuadraticFalloff,   //!< Inverse-square point radiator, 1 / (distance * distance)
+      CubicFalloff        //!< Inverse-cubed radiator, 1 / (distance * distance * distance)
+    };
+
     DD::Image::Pixel    _color;           //!< Pre-calculated global output color - usually color*intensity*expFactor
 
 
@@ -49,6 +84,10 @@ namespace slr
     //
     float              _diffuseBiasFactor;  //!< Default 1.0. Can be used to influence surface shaders that support it
     float              _specularBiasFactor; //!< Default 1.0. Can be used to influence surface shaders that support it
+    //
+    FalloffType        _falloffType;        //!< Default NoFalloff. Can be used to influence surface shaders that support it.
+    int32_t            _nShadowChannels;    //!< If outputting shadow AOVs this is non-zero
+    DD::Image::Channel _shadowChannels[3];  //!< Channels to write shadow weight to
 
 
   public:
@@ -97,13 +136,15 @@ namespace slr
     //! Called either on shader creation or shader value update.
     //! Updates core light parameters then calls _updateLightPropertiesAt() to
     //! let the shader subclass update its locals.
-    void  updateLightPropertiesAt(const usg::Prim&      lightPrim,
-                                  const fdk::TimeValue& time);
+    void  updateLightPropertiesAt(const SlrEngineContext& slrtx,
+                                  const usg::Prim&        lightPrim,
+                                  const fdk::TimeValue&   time);
 
     //! Subclass updates its local vars.
     //! Must implement.
-    virtual void  _updateLightPropertiesAt(const usg::Prim&      lightPrim,
-                                          const fdk::TimeValue& time) = 0;
+    virtual void  _updateLightPropertiesAt(const SlrEngineContext& slrtx,
+                                           const usg::Prim&        lightPrim,
+                                           const fdk::TimeValue&   time) = 0;
 
     //! Does nothing for base light class since light shaders are generated from
     //! Prims. Use updateLightProperties() instead, or access the imaging shader
@@ -194,6 +235,18 @@ namespace slr
     */
     float  specularBiasFactor() const { return _specularBiasFactor; }
 
+    //! Can be set by a LightShader to influence the light's falloff type in surface
+    //! shaders that support it.
+    FalloffType  fallOffType() const { return _falloffType; }
+
+    //! Returns true if the light should copy shadow results to the surfaceShaderAOV Pixel
+    //! passed to the illuminate() method.
+    bool  outputShadowAOVs() const { return (_nShadowChannels > 0); }
+
+    //! Convenience function to copy shadow channels to surface AOVs.
+    void  copyShadowsToOutputColorAOVs(const fdk::Vec3f& shadowTransmissionFactor,
+                                       DD::Image::Pixel& surfaceShaderColorAOVs) const;
+
 
     /*! Evaluate the light's contribution to a surface intersection.
         Returns false if light does not contribute to surface illumination.
@@ -228,38 +281,71 @@ namespace slr
         effects applied. i.e. it's the 'raw' output color of the light at the
         nominal 'surface' of the light for the angle described by illumRayOut.
 
-        \a shadowTransmissionOut is the amount of transmission (shadowing/occlusion)
-        between the light and the surface point. This is kept separate from \a colorOut
-        and \a directPdfWeightOut so that per-channel shadowing contribution can be
-        output from a shader separated from the illumination color and falloff.
+        \a shadowTransmissionFactorOut is the percentage amount of transmission
+        (shadowing/occlusion) between the light and the surface point, only valid between
+        0.0 (100% occlusion) and 1.0 (0% occlusion.) This is kept separate from \a colorOut
+        and \a directPdfWeightOut so that per-channel shadowing contribution can be output
+        from a shader separated from the illumination color and falloff.
+
+        \a surfaceShaderColorAOVs is the output Pixel that the surface shader is
+        currently calculating, and is provided to the light shader so it can add
+        arbitrary values (AOVs) to the surface output, typically to provide isolated
+        shadowing or illumination contributions. Warning - a light shader should not
+        mess with any channels it does not 'know' it can affect, and it should assume
+        the channels have been zeroed out beforehand. A light shader will want to
+        combine its value with the contents of the channel using an add or max. Note
+        that these channels are blended like all other color channels so any float
+        values that won't interpolate will likely be destroyed.
 
         Final illumination of the light is typically calculated by multiplying
-        (colorOut.rgb() * shadowTransmissionOut.rgb()) * directPdfWeightOut,
-        bearing in mind that DD::Image::Pixels can be multi-channel/layer!
+        (colorOut * shadowTransmissionFactorOut) * directPdfWeightOut.
     */
-    virtual bool    illuminate(const SlrShadingContext& stx,
-                               const fdk::Vec3f&        lobeN,
-                               const SlrLightInfo&      ltInfo,
-                               ndk::RayContext&         illumRayOut,
-                               float&                   directPdfWeightOut,
-                               DD::Image::Pixel&        colorOut,
-                               DD::Image::Pixel&        shadowTransmissionOut) const = 0;
+    virtual bool    illuminate(const SlrShadingContext&      stx,
+                               const SlrPrimEnabledLighting& primLightingInfo,
+                               const fdk::Vec3f&             lobeN,
+                               SlrRayContext&                illumRayOut,
+                               float&                        directPdfWeightOut,
+                               fdk::Vec3f&                   colorOut,
+                               fdk::Vec3f&                   shadowTransmissionFactorOut,
+                               DD::Image::Pixel&             surfaceShaderColorAOVs) const = 0;
 
-    /*! Get the optical occlusion weight along \a illumRay between its minT and maxT.
-        The returned value is usually applied as a multiplier against the light's emission.
+
+    /*! Get the optical transmission percentage along \a illumRay between its minT and maxT,
+        which is only valid between 0.0 (0% transmission) and 1.0 (100% transmission,) returning
+        true if illumRay origin is fully occluded (0% transmission.)
+
+        The returned factor is usually applied as a multiplier against the light's emission color.
         The shading context object information can be used for light shadow masking
         functionality and to determine if global shadowing is enabled.
 
-        Default implementation checks stx.shadowingEnabled() and if enabled calls
-        stx.getThinTransmissionFactor() with illumRay, returning true if there's any
-        transmission, or false if 100% occluded.
+        Default implementation checks ltInfo.castShadows() and if enabled calls
+        stx.getThinTransmissionFactor() with illumRay.
     */
-    virtual bool  shadowTransmissionFactor(const SlrShadingContext& stx,
-                                           const ndk::RayContext&   illumRay,
-                                           fdk::Vec3f&              shadowTransmissionFactor) const;
+    virtual bool   getShadowTransmissionFactor(const SlrShadingContext&      stx,
+                                               const SlrPrimEnabledLighting& primLightingInfo,
+                                               const SlrRayContext&          illumRay,
+                                               fdk::Vec3f&                   shadowTransmissionFactor) const;
 
+    //! Get the distance based attenuation factor based on the light's falloff type.
+    //! The defined falloff rates are: inverse-square (common point radiator), inverse-cubed,
+    //! linear, and no falloff. No falloff always returns 1.0.
+    virtual float  getDistanceAttenuation(float distance) const;
+
+  protected:
+    //! Convert a usg::Token to a SlrLightShader::FalloffType.
+    //! This is used to convert the 'slr:falloff_type' token from the light prim
+    //! into a SlrLightShader::FalloffType enum value and can be overriden by subclasses
+    //! if required.
+    virtual FalloffType convertToFalloffType(const usg::Token& token) const;
+
+    //--------------------------------------------------------------------
+    // Light Color and Temperature methods
+    //--------------------------------------------------------------------
+    //! Converts a color temperature (in Kelvin) to an RGB color.
+    static fdk::Vec3f ColorTemperatureAsRgb(float colorTemperature);
 
   private:
+    friend class SlrLightMaterial;
     //! Disabled copy constructor.
     SlrLightShader(const SlrLightShader&) = delete;
     //! Disabled assignment operator.
@@ -294,8 +380,12 @@ namespace slr
     //
     DD::Image::Hash       hash;                 //!< Global hash of object material
     DD::Image::ChannelSet inputTextureChannels; //!< All the channels from all input texture samplers
-    DD::Image::Channel    shadowChannel;        //!< Channels to write shadow weight to
-    DD::Image::ChannelSet outputChannels;       //!< All the channels this material outputs
+    DD::Image::ChannelSet outputColorChannels;  //!< All the color (blendable) channels this material outputs
+    DD::Image::ChannelSet outputDataChannels;   //!< All the data (non-blendable) channels this material outputs
+    //
+    bool                  castsShadows;         //!< True if light casts shadows
+    std::unique_ptr<usg::PathExpression> objectIllumMask; //!< Path Expression for object illumination matching if present
+    std::unique_ptr<usg::PathExpression> objectReceiveShadowMask; //!< Path Expression for recieving shadowing matching if present
     //
     SlrShader::InputBindingList textureBindings;  //!< List of all texture bindings used in material
 
@@ -342,6 +432,12 @@ namespace slr
     // Shading methods redirect to 'light_shaders' group.
     //------------------------------------------------------------
 
+    //! Called either on shader creation or shader value update.
+    //! Updates core light parameters on the material and shaders.
+    void  updateLightPropertiesAt(const SlrEngineContext& slrtx,
+                                  const usg::Prim&        lightPrim,
+                                  const fdk::TimeValue&   time);
+
     //! Lights that need to sample input textures declare their shading layers via this.
     const ShadingLayerReqSet&  writableShadingLayers() const;
 
@@ -352,23 +448,47 @@ namespace slr
     //! Calls requestResources() on the set of input shaders.
     void  requestResources(const DD::Image::ChannelSet& request_channels);
 
-    //! Calls initializeForShading() on the set of input shaders.
-    void   initializeForShading(uint32_t num_shading_threads);
+    //! Calls initializeForShadingThread() on the set of input shaders.
+    void  initializeForShadingThread(SlrThreadContext& sttx);
 
-
-    //! Redirects to \a light_group.output, if valid.
-    bool  illuminate(const SlrShadingContext& stx,
-                     const fdk::Vec3f&        lobeN,
-                     const SlrLightInfo&      ltInfo,
-                     ndk::RayContext&         illumRayOut,
-                     float&                   directPdfWeightOut,
-                     DD::Image::Pixel&        colorOut,
-                     DD::Image::Pixel&        shadowTransmissionOut) const;
+    //! Calls cleanupAfterShading() on the set of input shaders.
+    void  cleanupAfterShading();
 
   };
 
   using SlrLightMaterialSet = std::unordered_set<SlrLightMaterial*>;
 
+
+
+  //--------------------------------------------------------------------
+  //--------------------------------------------------------------------
+  //--------------------------------------------------------------------
+
+  inline void SlrLightShader::copyShadowsToOutputColorAOVs(const fdk::Vec3f& shadowTransmissionFactor,
+                                                           DD::Image::Pixel& surfaceShaderColorAOVs) const
+  {
+    if (_nShadowChannels == 0) {
+      ; // most common case
+    }
+    else if (_nShadowChannels > 2) {
+      float& aov0 = surfaceShaderColorAOVs[_shadowChannels[0]];
+      float& aov1 = surfaceShaderColorAOVs[_shadowChannels[1]];
+      float& aov2 = surfaceShaderColorAOVs[_shadowChannels[2]];
+      aov0 = std::max(aov0, (1.0f - shadowTransmissionFactor.x));
+      aov1 = std::max(aov1, (1.0f - shadowTransmissionFactor.y));
+      aov2 = std::max(aov2, (1.0f - shadowTransmissionFactor.z));
+    }
+    else if (_nShadowChannels > 1) {
+      float& aov0 = surfaceShaderColorAOVs[_shadowChannels[0]];
+      float& aov1 = surfaceShaderColorAOVs[_shadowChannels[1]];
+      aov0 = std::max(aov0, (1.0f - shadowTransmissionFactor.x));
+      aov1 = std::max(aov1, (1.0f - shadowTransmissionFactor.y));
+    }
+    else if (_nShadowChannels > 0) {
+      float& aov0 = surfaceShaderColorAOVs[_shadowChannels[0]];
+      aov0 = std::max(aov0, (1.0f - shadowTransmissionFactor.x));
+    }
+  }
 
 } // namespace slr
 

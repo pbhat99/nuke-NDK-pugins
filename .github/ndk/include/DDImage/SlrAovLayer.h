@@ -14,7 +14,7 @@
 
 namespace slr
 {
-  class SlrShadingContext;
+  class ShadingSample;
 
 
   /*! Stores input and output channel indice mappings.
@@ -41,7 +41,15 @@ namespace slr
       MERGE_MAX
     };
 
-    typedef fdk::Vec3f (*Handler)(const SlrAovLayer& aov, const SlrShadingContext& stx);
+    enum XformToSpace
+    {
+      XFORM_TOSPACE_OFF,
+      XFORM_TOSPACE_SHADING,
+      XFORM_TOSPACE_CAMERA,
+      XFORM_TOSPACE_WORLD
+    };
+
+    typedef fdk::Vec3f (*Handler)(const SlrAovLayer& aov, ShadingSample&); // for internal use only
 
 
   public:
@@ -49,14 +57,15 @@ namespace slr
     bool                  enabled;          //!< Aov enabled
     ndk::Channel          inChan;           //!< Starting input chan (assumes chans in sequential order!)
     int32_t               nInChans;         //!< Number of input channels to copy, 1,2or3
-    ndk::Channel::Type    inPurpose;        //!< 
-    usg::Value::Type      inValueType;      //!<
+    usg::Value::Type      inValueType;      //!< Float2, Float3, Normal, Point, etc.
+    ndk::Channel::Type    inPurpose;        //!< Vec2, Vec3, etc
+    ndk::Channel::Interpretation inInterp;  //!< PositionXYZ, NormalXYZ, etc
+    SlrAovLayer::Handler  inHandler;        //!< Source data retrieval routine
     //
     DD::Image::Channel    outChan[3];       //!< List of output channels, max of 3
     UnpremultMode         unpremultMode;    //!< Unpremult by coverage mode
     MergeMode             mergeMode;        //!< Merging mode
-    SlrAovLayer::Handler  handler;          //!< Custom handler routine
-
+    XformToSpace          xformToSpace;     //!< XformToSpace mode
 
     SlrAovLayer(const char* _name = "", int32_t _nInChans = 0, SlrAovLayer::Handler _handler = nullptr);
   };
@@ -72,7 +81,13 @@ namespace slr
   //! an source channel array to a destination channel array.
   struct SlrAovChannelMap
   {
-    using AovMapping = std::pair<ndk::Channel, DD::Image::Channel>;
+    struct AovMapping
+    {
+      const SlrAovLayer* aovLayer;
+      ndk::Channel       srcParam;
+      DD::Image::Channel outChan;
+      AovMapping(const SlrAovLayer* aov, ndk::Channel src, DD::Image::Channel dst) : aovLayer(aov), srcParam(src), outChan(dst) {}
+    };
     std::vector<AovMapping> mappings;
 
     void  clear() { mappings.clear(); }
@@ -124,15 +139,17 @@ namespace slr
 //------------------------------------------------------------------
 
 inline SlrAovLayer::SlrAovLayer(const char* _name, int32_t _nInChans, SlrAovLayer::Handler _handler)
-  : name(_name)
+  : name((_name) ? _name : "")
   , enabled(false)
   , inChan(ndk::Chan_Empty)
   , nInChans(_nInChans)
-  , inPurpose(ndk::Channel::Type::None)
   , inValueType(usg::Value::Type::InvalidType)
+  , inPurpose(ndk::Channel::Type::NoType)
+  , inInterp(ndk::Channel::Interpretation::NoInterp)
+  , inHandler(_handler)
   , unpremultMode(UNPREMULT_BY_COVERAGE)
   , mergeMode(MERGE_BLEND)
-  , handler(_handler)
+  , xformToSpace(XFORM_TOSPACE_OFF)
 {
   outChan[0] = outChan[1] = outChan[2] = DD::Image::Chan_Black;
 }
@@ -141,7 +158,7 @@ inline std::ostream& operator<<(std::ostream& o, const SlrAovChannelMap& mapper)
 {
   o << "[";
   for (const auto& map : mapper.mappings) {
-    o << " " << map.first.index() << "->" << static_cast<uint32_t>(map.second);
+    o << " " << map.srcParam.index() << "->" << static_cast<uint32_t>(map.outChan);
   }
   o << " ]";
   return o;
@@ -151,21 +168,7 @@ inline std::ostream& operator<<(std::ostream& o, const SlrAovChannelMap& mapper)
 inline void SlrAovChannelMap::addAov(const SlrAovLayer& aovLayer)
 {
   for (int32_t i = 0; i < aovLayer.nInChans; ++i) {
-    mappings.emplace_back(AovMapping(aovLayer.inChan + i, aovLayer.outChan[i]));
-  }
-}
-
-inline void SlrAovChannelMap::copy(const float* srcArray, float* outArray)
-{
-  for (const auto& map : mappings) {
-    outArray[map.second] = srcArray[map.first];
-  }
-}
-
-inline void SlrAovChannelMap::copy(const float* srcArray, float* outArray, float weight)
-{
-  for (const auto& map : mappings) {
-    outArray[map.second] = srcArray[map.first] * weight;
+    mappings.emplace_back(AovMapping(&aovLayer, aovLayer.inChan + i, aovLayer.outChan[i]));
   }
 }
 
@@ -173,18 +176,14 @@ inline DD::Image::ChannelSet SlrAovChannelMap::channels()
 {
   DD::Image::ChannelSet chans;
   for (const auto& map : mappings) {
-    chans += map.second;
+    chans += map.outChan;
   }
   return chans;
 }
 
 inline DD::Image::ChannelPack SlrAovChannelMap::channelPack()
 {
-  DD::Image::ChannelPack chans;
-  for (const auto& map : mappings) {
-    chans.add(map.second, false/*deduplicate*/);
-  }
-  return chans;
+  return DD::Image::ChannelPack(channels());
 }
 
 

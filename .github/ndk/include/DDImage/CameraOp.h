@@ -1,8 +1,4 @@
-//------------------------------------------------------------------------------
-// DDImage/CameraOp.h
-//
 // Copyright (c) 2021 The Foundry Visionmongers Ltd.  All Rights Reserved.
-//------------------------------------------------------------------------------
 
 #ifndef DDIMAGE_CAMERAOP_H
 #define DDIMAGE_CAMERAOP_H
@@ -15,11 +11,11 @@
 #include "fdk/math/Mat4.h"
 #include "fdk/math/types.h" // for Mat4dList
 
-#if kDDImageVersionMajorNum <= 16
+#if kDDImageVersionMajorNum <= 17
 #include "DDImage/Shutter.h"
 #include "DDImage/Vector2.h"
 #else
-#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
 #endif
 
 namespace DD
@@ -29,14 +25,14 @@ namespace DD
 
     class ProjectionFunc;
     class Format;
-#if kDDImageVersionMajorNum <= 16
+#if kDDImageVersionMajorNum <= 17
     // For backwards-compatibility:
     class Scene;
     class MatrixArray;
     class Scene;
     class VArray;
 #else
-#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
 #endif
 
     //----------------------------------------------------------------------
@@ -49,7 +45,7 @@ namespace DD
                                  public ndk::MultiProjectionCamera
     {
     protected:
-#if kDDImageVersionMajorNum <= 16
+#if kDDImageVersionMajorNum <= 17
       mFnDeprecatedLegacy3DSystemInNuke14("focal_length_ has been deprecated, use _params.optics.focalLength instead.")
       double focal_length_;     //!< Deprecated, use _params.optics.focalLength instead
 
@@ -74,14 +70,14 @@ namespace DD
       mFnDeprecatedLegacy3DSystemInNuke14("focal_point_ has been deprecated, use _params.optics.focusDistance instead.")
       double focal_point_;      //!< Deprecated, use _params.optics.focusDistance instead
 
-      mFnDeprecatedLegacy3DSystemInNuke14("win_translate_ has been deprecated, use _params.sensor.apertureTranslate instead.")
-      Vector2 win_translate_;   //!< Deprecated, use _params.sensor.apertureTranslate instead
+      mFnDeprecatedLegacy3DSystemInNuke14("win_translate_ has been deprecated, use _params.sensor.apertureWindowTranslate instead.")
+      Vector2 win_translate_;   //!< Deprecated, use _params.sensor.apertureWindowTranslate instead
 
-      mFnDeprecatedLegacy3DSystemInNuke14("win_scale_ has been deprecated, use _params.sensor.apertureScale instead.")
-      Vector2 win_scale_;       //!< Deprecated, use _params.sensor.apertureScale instead
+      mFnDeprecatedLegacy3DSystemInNuke14("win_scale_ has been deprecated, use _params.sensor.apertureWindowScale instead.")
+      Vector2 win_scale_;       //!< Deprecated, use _params.sensor.apertureWindowScale instead
 
-      mFnDeprecatedLegacy3DSystemInNuke14("win_roll_ has been deprecated, use _params.sensor.apertureRotate instead.")
-      double win_roll_;         //!< Deprecated, use _params.sensor.apertureRotate instead
+      mFnDeprecatedLegacy3DSystemInNuke14("win_roll_ has been deprecated, use _params.sensor.apertureWindowRotate instead.")
+      double win_roll_;         //!< Deprecated, use _params.sensor.apertureWindowRotate instead
 
       //----------------------------------------------------------------------------
 
@@ -109,7 +105,7 @@ namespace DD
       mFnDeprecatedLegacy3DSystemInNuke14("use_vertical_lock_ has been deprecated")
       bool    use_vertical_lock_; //!< Deprecated
 #else
-#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
 #endif
       int32_t         _projectionSelection; //!< Projection menu knob index
       //
@@ -129,6 +125,12 @@ namespace DD
       const CameraOp* cameraOp() const override { return this; }
             CameraOp* cameraOp()       override { return this; }
 
+      //! Retrieve a version of this CameraOp at a specific OutputContext.
+      CameraOp* getCameraOpAt(const OutputContext& context) { return BuildOpAt(this, context)->cameraOp(); }
+
+      //! Retrieve the properties of this camera at a specific context.
+      virtual ndk::Camera::Sample  getPropertiesAt(const OutputContext& context) const;
+
       /*! Return a default camera that can be used when there is no camera attached
           to your renderer. This camera is at the origin, looking along -Z, with a
           perspective projection set to a lens ratio (focal-length / film-width) of 1.
@@ -146,45 +148,23 @@ namespace DD
 
       //-----------------------------------------------------------------
 
+#if kDDImageVersionMajorNum <= 17
       /*! Default knobs puts the transform controls on the front tab, and
           the projection, shutter, and lens controls on tab 'Projection'.
       */
       void knobs(Knob_Callback) override;
 
-      /*! AxisOp::knobs() calls this after addTransformKnobs(), inserting the
-          'Projection' tab ahead of the 'Display' tab.
-          The 'Projection' tab contains the projection, shutter, and lens controls.
-      */
-      void  addExtraFrontPanelKnobs(Knob_Callback f) override;
-
-      //! Adds the frustum visualization controls.
-      void  addDisplayOptionsKnobs(Knob_Callback f) override;
-
-      //! Adds the default shutter controls.
-      virtual void  addShutterKnobs(Knob_Callback);
-
-      //! Adds the default projection controls.
-      //! If \a enableDefaultKnobs is false then the standard projection-related
-      //! knobs that are not needed by the current projection are disabled.
-      virtual void  addProjectionKnobs(Knob_Callback f,
-                                       bool          enableDefaultKnobs = true);
-
-      //! Adds the default aperture-window controls.
-      //! If \a enableDefaultKnobs is false then the standard projection-related
-      //! knobs that are not needed by the current projection are disabled.
-      virtual void  addWindowKnobs(Knob_Callback f,
-                                   bool          enableDefaultKnobs = true);
-
-      //! Adds the default lens controls.
-      //! If \a enableDefaultKnobs is false then the standard projection-related
-      //! knobs that are not needed by the current projection are disabled.
-      virtual void  addLensKnobs(Knob_Callback f,
-                                 bool          enableDefaultKnobs = true);
-
       //!
       int knob_changed(Knob*) override;
+#else
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
+#endif
 
       //-----------------------------------------------------------------
+
+      //! Return the knob which provides projection selection, if there is one.
+      //! Base returns null.
+      virtual Knob*  projectionSelectorKnob() const { return nullptr; }
 
       //! The currently-assigned projection plugin.
       virtual ProjectionFunc*  projectionPlugin() const { return _projectionPlugin; }
@@ -216,7 +196,10 @@ namespace DD
       //! the matching ProjectionFunc plugin. Note that this class name is *NOT*
       //! the plugin name and will have a prefix and suffix added. See \a ProjectionFunc
       //! for more info.
-      const char*  projectionFuncClassName() const;
+      //! \a selectorKnob is optional to override the default retrieval of the selector
+      //! Knob from projectionSelectorKnob().
+      //! Default implementation returns an empty string.
+      virtual const char*  projectionFuncClassName(Knob* selectorKnob = nullptr) const;
 
       /*! Returns true if current camera projection can be described linearly with a
           4x4 matrix, based on the camera's current settings. This is usually only
@@ -232,8 +215,35 @@ namespace DD
 
       //-----------------------------------------------------------------
 
-      static const char* projection_modes[];
-      static const char* projection_modes_renderer[];
+      //! Convenience to convert physical aperture offset units to square NDC (1:1)
+      //! window translations units. Note that \a offsetInMm x & y are both normalized
+      //! (scaled) to NDC units by the aperture width ONLY, which keeps the relative NDC x/y
+      //! distance change ratio 1:1.
+      //!
+      //! This is because physical distance units like millimeters always represent the same
+      //! distance when measured in the X axis as they do when measured in the Y axis, so
+      //! normalizing them into NDC space only requires one dimension (width) to scale both.
+      //!
+      //! This is a trivial calculation (winTxy = offsetInMm / (apertureWidthInMm / 2.0)) but
+      //! is often misunderstood which is why this utility method is provided.
+      static fdk::Vec2d  ApertureOffsetToWindowTranslate(const fdk::Vec2d& offsetInMm, double apertureWidthInMm);
+      static fdk::Vec2d  ApertureOffsetToWindowTranslate(double offsetXInMm, double offsetYInMm, double apertureWidthInMm);
+
+      //! Convenience to convert square (1:1) NDC translations into physical aperture offset
+      //! units. Note that \a winTxy x & y are both de-normalized (scaled) to NDC units by
+      //! the aperture width ONLY, which keeps the relative aperture x/y distance change
+      //! ratio 1:1.
+      //! 
+      //! This is because physical distance units like millimeters always represent the same
+      //! distance when measured in the X axis as they do when measured in the Y axis, so
+      //! de-normalizing them from NDC space only requires one dimension (width) to scale both.
+      //!
+      //! This is a trivial calculation (offsetInMm = winTxy * (apertureWidthInMm / 2.0)) but
+      //! is often misunderstood which is why this utility method is provided.
+      static fdk::Vec2d  WindowTranslateToApertureOffset(const fdk::Vec2d& winTxy, double apertureWidthInMm);
+      static fdk::Vec2d  WindowTranslateToApertureOffset(double winTx, double winTy, double apertureWidthInMm);
+
+      //-----------------------------------------------------------------
 
       /*! Return a linear camera projection matrix for the projection mode arg
           using the CameraOp's current lens values (ie its focal_length,
@@ -273,7 +283,7 @@ namespace DD
           actual transformation from input space to output space. You would
           do this first, then multiply by the projection*local*parent.
        */
-      static void  toFormat(fdk::Mat4f&, const Format*);
+      static void  ToFormat(fdk::Mat4f&, const Format*);
 
       /*! Opposite transformation of to_format(). Multiplies the passed
           matrix by a transformation that scales the input format to go from
@@ -284,10 +294,20 @@ namespace DD
           if the camera lens and "taking lens" are equal the image fills the
           field of view.
        */
-      static void  fromFormat(fdk::Mat4f&, const Format*);
+      static void  FromFormat(fdk::Mat4f&, const Format*);
+
+      /*! Multiplies \a projectionMatrix by an NDC-to-format transform for
+          \a format, so the resulting projection maps world space into the
+          format's pixel space with the correct aspect and pixel aspect.
+          Use this on the projection matrix when passing it to a renderer
+          whose framing is defined by an output Format.
+       */
+      static fdk::Mat4d  FormatScaleProjectionMatrix(const Format&     format,
+                                                     const fdk::Mat4d& projectionMatrix);
 
       //-----------------------------------------------------------------
 
+#if kDDImageVersionMajorNum <= 17
       //!
       HandlesMode  doAnyHandles(ViewerContext* ctx) override;
 
@@ -297,73 +317,7 @@ namespace DD
       //! Draws a lovely camera, I think it is a Mitchell.
       void  draw_handle(ViewerContext*) override;
 
-      //! Draw the camera's frustum outline solid or wireframe, dashed if 'dashed_lines'=true.
-      virtual void  drawCameraIcon(bool solid,
-                                   bool dashed_lines=false);
 
-
-      //! Draw the node name at position 0,0,0 which will be the local center.
-      void          drawNodeName(const char* subcam_name = "");
-
-      //! Draw the node name at an xyz position \a P relative to the local center.
-      void          drawNodeName(const fdk::Vec3d& P,
-                                 const char*       subcam_name = "");
-
-      //! Draw the aperture rectangle in millimeters, centered on xyz position \a P.
-      void          drawAperture(const fdk::Vec3d& P,
-                                 bool              dashed_lines = false);
-
-      //! Draw the camera's frustum.
-      void          drawSolidFrustum(const fdk::Vec3d& near_corner,
-                                     const fdk::Vec3d& far_corner);
-      //! Draw the camera's frustum outline, dashed if 'dashed_lines'=true.
-      void          drawWireFrustum(const fdk::Vec3d& near_corner,
-                                    const fdk::Vec3d& far_corner,
-                                    bool              dashed_lines = false);
-
-      //-----------------------------------------------------------------
-
-      //! SceneLoaderOpI: If loader is attached to an AxisOp subclass return 'this'.
-      CameraOp* asCameraLoaderOp() override { return this; }
-
-      /*! SceneLoaderOpI:
-          Try to import camera prim data from the provided stage. Will return 1(error) if
-          stage is invalid. If \a prim_path is empty then -1 will be returned indicating
-          no change has occured, otherwise if \a prim_path is invalid or not present in
-          stage then 1(error) will be returned.
-
-          This will call AxisOp::importScenePrim() to import the XformablePrim data
-          then import the CameraPrim attributes.
-
-          Return codes:
-          -1 - no prim data was loaded and no error, usually due to empty prim path
-           0 - prim data was loaded with no error
-           1 - there was an error and no prim data was loaded
-      */
-      int32_t  importScenePrim(const usg::StageRef& stage,
-                               const std::string&   prim_path) override;
-
-    protected:
-      //! Builds a path from AxisOp::exportBasePrimPath(), appending the Node displayName()
-      //! to use as the camera schema's prim name. The camera schema's type name comes from
-      //! \a exportCameraSchemaTypeName().
-      //!
-      //! For example if the Node class name is 'MyFisheyeCamera_v4' we want it to show up in the
-      //! scenegraph as 'MyFisheyeCamera', while the camera schema name may be 'FisheyeCamera'.
-      virtual usg::Path  exportCameraSchemaPrimPath() const;
-
-      //! Return the schema type name to use for the prim defined by
-      //! \a exportCameraSchemaPrimPath().
-      //! Base class returns 'Camera'.
-      virtual const char*  exportCameraSchemaTypeName() const;
-
-      //! ScenePrimExporterOpI: Subclass portion of exportScenePrims().
-      void  _exportScenePrims(usg::LayerRef&            exportLayer,
-                              int32_t                   exportMode,
-                              const fdk::FrameValueSet& sampleFrames = fdk::FrameValueSet()) const override;
-
-
-#if kDDImageVersionMajorNum <= 16
     protected:
       //----------------------------------------------------------------------------
       // Deprecated single-precision matrices - these are derived from the
@@ -376,6 +330,8 @@ namespace DD
       //----------------------------------------------------------------------------
       // Deprecated functions - will disappear in a Nuke major rev after 16
       //----------------------------------------------------------------------------
+      static const char* projection_modes[];
+      static const char* projection_modes_renderer[];
       enum
       mFnDeprecatedLegacy3DSystemInNuke14("Enumeration deprecated, use enum class ndk::LensProjection instead.")
       {
@@ -392,10 +348,10 @@ namespace DD
         const char* Class() const override { return "Camera"; }
       mFnDeprecatedLegacy3DSystemInNuke14("node_help() has been deprecated, implement on subclass plugin instead.")
         const char* node_help() const override { return ""; }
-      mFnDeprecatedLegacy3DSystemInNuke14("projection_knobs() has been deprecated, use addProjectionKnobs() instead.")
-        virtual void projection_knobs(Knob_Callback f) { addProjectionKnobs(f); }
-      mFnDeprecatedLegacy3DSystemInNuke14("lens_knobs() has been deprecated, use addDistortionKnobs() instead.")
-        virtual void lens_knobs(Knob_Callback f) { addLensKnobs(f); }
+      mFnDeprecatedLegacy3DSystemInNuke14("projection_knobs() has been deprecated, use CameraSceneOp::addProjectionKnobs() instead.")
+        virtual void projection_knobs(Knob_Callback f);
+      mFnDeprecatedLegacy3DSystemInNuke14("lens_knobs() has been deprecated, use CameraSceneOp::addDistortionKnobs() instead.")
+        virtual void lens_knobs(Knob_Callback f);
       //-----------------------------
       mFnDeprecatedLegacy3DSystemInNuke14("projection() has been deprecated, use projectionMatrix() instead")
         const Matrix4& projection() const;
@@ -433,7 +389,7 @@ namespace DD
         const Vector2& win_translate() const { return win_translate_; }
       mFnDeprecatedLegacy3DSystemInNuke14("win_scale() has been deprecated, use windowScale() instead")
         const Vector2& win_scale() const { return win_scale_; }
-      mFnDeprecatedLegacy3DSystemInNuke14("win_roll() has been deprecated, use windowRotateZ() instead")
+      mFnDeprecatedLegacy3DSystemInNuke14("win_roll() has been deprecated, use windowRotate() instead")
         double win_roll() const { return win_roll_; }
       mFnDeprecatedLegacy3DSystemInNuke14("projection_mode() has been deprecated, use projectionMode() instead")
         int projection_mode() const { return projection_mode_; }
@@ -471,40 +427,62 @@ namespace DD
       mFnDeprecatedLegacy3DSystemInNuke14("lensNfunction(int mode) has been deprecated.")
         virtual LensNFunc* lensNfunction(int mode) const;
 
-      mFnDeprecatedLegacy3DSystemInNuke14("to_format has been deprecated, use toFormat instead.")
+      mFnDeprecatedLegacy3DSystemInNuke14("to_format has been deprecated, use ToFormat instead.")
       static void to_format(Matrix4&, const Format*);
 
-      mFnDeprecatedLegacy3DSystemInNuke14("from_format has been deprecated, use fromFormat instead.")
+      mFnDeprecatedLegacy3DSystemInNuke14("from_format has been deprecated, use FromFormat instead.")
       static void from_format(Matrix4&, const Format*);
+
+      mFnDeprecatedLegacy3DSystemInNuke14("toTormat has been deprecated, use ToFormat instead.")
+      static void toFormat(fdk::Mat4f& m, const Format* f) { ToFormat(m, f); }
+      mFnDeprecatedLegacy3DSystemInNuke14("fromFormat has been deprecated, use FromFormat instead.")
+      static void fromFormat(fdk::Mat4f& m, const Format* f) { FromFormat(m, f); }
 
       //----------------------------------------------------------------------------
       //----------------------------------------------------------------------------
 #else
-#error "Remove the above code block in Nuke 17 as they are deprecated in Nuke 14."
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 14."
 #endif
-
-    public:
-      //! For internal use only - called in addProjectionKnobs() to add ProjectionFunc dynamic knobs.
-      void addProjectionFuncCustomKnobs(Knob_Callback);
 
     protected:
       //! Subclass implemention of \a validateCamera() to perform any custom configuration
       //! of the camera, called whenever the function has been changed.
       void _validateCamera() override;
 
-      //! Called from knob_changed when projection selection is changed via knob interaction.
-      int _doProjectionFuncKnobChanged(Knob*, int callAgain);
       //! Sets _newProjectionPlugin. _projectionPlugin gets updated in _validate().
       bool _setProjectionFuncPlugin(const char* projectionClassName);
 
-    private:
+    protected:
+      double          _worldToMeters;       //!< Is converted to sensor.sceneToCameraFactor
       ProjectionFunc* _newProjectionPlugin; //!< New projection plugin selected, non-null if changed
       ProjectionFunc* _projectionPlugin;    //!< Projection func plugin to use, if applicable
-
-      Knob*   _projFuncKnob;                //!< Projection selector knob
-      Knob*   _projFuncDynamicDividerKnob;  //!< Knob signpost where ProjectionFunc dynamic knobs start
-      int32_t _nProjFuncCustomKnobs;        //!< Count of added ProjectionFunc dynamic knobs
     };
+
+
+
+    /*static*/ inline fdk::Vec2d
+    CameraOp::ApertureOffsetToWindowTranslate(const fdk::Vec2d& offsetInMm, double apertureWidthInMm)
+    {
+      return (apertureWidthInMm > 0.0) ? (offsetInMm / (apertureWidthInMm / 2.0)) : offsetInMm;
+    }
+
+    /*static*/ inline fdk::Vec2d
+    CameraOp::ApertureOffsetToWindowTranslate(double offsetXInMm, double offsetYInMm, double apertureWidthInMm)
+    {
+      return ApertureOffsetToWindowTranslate({offsetXInMm, offsetYInMm}, apertureWidthInMm);
+    }
+
+    /*static*/ inline fdk::Vec2d
+    CameraOp::WindowTranslateToApertureOffset(const fdk::Vec2d& winTxy, double apertureWidthInMm)
+    {
+      return (apertureWidthInMm > 0.0) ? winTxy * (apertureWidthInMm / 2.0) : winTxy;
+    }
+
+    /*static*/ inline fdk::Vec2d
+    CameraOp::WindowTranslateToApertureOffset(double winTx, double winTy, double apertureWidthInMm)
+    {
+      return WindowTranslateToApertureOffset({winTx, winTy}, apertureWidthInMm);
+    }
 
   }
 }

@@ -13,7 +13,7 @@
 #include "fdk/math/Mat4.h"
 
 namespace ndk {
-  class RayContext;
+  struct RayContext;
   class LensProjectionFunction;
 
 
@@ -56,12 +56,13 @@ namespace ndk {
   inline bool  IsProjectionModeLinear(LensProjection mode) { return (mode <= LensProjection::Orthographic); }
 
   //! Build a standard linear projection matrix.
+  //! Note that apertureWindowTranslate is in square (1:1) NDC units.
   NDK_API fdk::Mat4d  BuildProjectionMatrix(double     lensMagnification,
                                             double     clipNearPlane,
                                             double     clipFarPlane,
-                                            fdk::Vec2d apertureTranslate,
-                                            fdk::Vec2d apertureScale,
-                                            double     apertureRotateInDegrees,
+                                            fdk::Vec2d apertureWindowTranslate,
+                                            fdk::Vec2d apertureWindowScale,
+                                            double     apertureWindowRotateInDegrees,
                                             bool       isPerspective = true);
 
   //! Clamp an st value to -1..+1 range.
@@ -248,6 +249,15 @@ namespace ndk {
                                     const fdk::Vec2f&     screenWindowSt,
                                     float                 distance) const { return distance; }
 
+    //! Un-correct linear-projected 'Z' to vector distance, ie the inverse function
+    //! to \a distanceToLinearZ().
+    //! Usually this is only required when the projection is perspective.
+    //! \a screenWindowSt provides the distance from lens center.
+    //! Default implementation returns the linearZ value unchanged.
+    virtual float linearZToDistance(const Camera::Sample& cameraContext,
+                                    const fdk::Vec2f&     screenWindowSt,
+                                    float                 linearZ) const { return linearZ; }
+
     //-----------------------------------------------------------------
 
     //! Lens magnification (zoom) is usually film-width / focal-length for a perspective
@@ -304,8 +314,8 @@ namespace ndk {
     //! Generate RayContext ray geometry.
     //! \a screenCoords is an array of ProjectCoord struct \a nRays in size.
     //! \a cameraContexts is an array of ProjectionCameraContexts \a nRays in size.
-    //! \a raysOut must be a pre-allocated array large enough to hold \a nRays worth
-    //! of RayContexts.
+    //! \a raysOut must be a pre-allocated array large enough to hold \a nRays of
+    //! RayContext pointers.
     //!
     //! The projection function should not assume the type of RayContext being
     //! configured and should only set ray geometry values origin, direction, minT,
@@ -325,7 +335,7 @@ namespace ndk {
                                      const ProjectCoord*           screenCoords,
                                      const Camera::Sample*         cameraContexts,
                                      const ProjectionImageContext& imageContext,
-                                     ndk::RayContext*              raysOut) const {}
+                                     RayContext**                  raysOut) const {}
 
     //! Project 3D coordinates through the function to 2D screen coords (but NOT
     //! pixel coords!)

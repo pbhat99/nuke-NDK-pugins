@@ -16,19 +16,11 @@ namespace DD {
     class DeepReaderImpl;
     class DeepOutputPlane;
     class Op;
-
-    /*
-     * This class is used to provide file-format specific 
-     * knobs for DeepReaders.  It is different from DeepReader
-     * as DeepReader needs to be per-file, whereas a DeepReaderFormat
-     * applies for the entire deep sequence.
-     */
-    class DDImage_API DeepReaderFormat : public FileHandler
-    {
-    public:
-      ~DeepReaderFormat() override;
-      virtual void append(Hash& hash) = 0;
-    };
+#if kDDImageVersionMajorNum <= 17
+    using DeepReaderFormat = FileReaderFormat; // DeepReaderFormat type is deprecated, use FileReaderFormat instead
+#else
+#error "Remove the above code block in Nuke 18 as they are deprecated in Nuke 17."
+#endif
 
     class DDImage_API DeepReaderOwner
     {
@@ -91,6 +83,13 @@ namespace DD {
       virtual bool doDeepEngine(DD::Image::Box, const DD::Image::ChannelSet&, DD::Image::DeepOutputPlane&) = 0;
 
       virtual ~DeepReader();
+
+      //! Returns true if Reader::setInPreviewMode() has been set true. This is set
+      //! primarily by the file browser so a reader can check if it is running in a
+      //! standalone context (not owned by an Op).
+      //! Same as calling Reader::inPreviewMode().
+      static bool InPreviewMode();
+
 
       class DDImage_API Description : public DD::Image::ReaderDescription
       {
