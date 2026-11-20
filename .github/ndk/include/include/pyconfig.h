@@ -293,7 +293,7 @@ Py_NO_ENABLE_SHARED to find out.  Also support MS_NO_COREDLL for b/w compat */
 // #       endif /* Py_BUILD_CORE */
 // #endif /* MS_COREDLL */
 
-#if defined(MS_WIN64)
+#if defined(MS_WIN64) || !defined(_WIN32)
 /* maintain "win32" sys.platform for backward compatibility of Python code,
    the Win64 API should be close enough to the Win32 API to make this
    preferable */
@@ -649,7 +649,11 @@ Py_NO_ENABLE_SHARED to find out.  Also support MS_NO_COREDLL for b/w compat */
 #define HAVE_WCHAR_H 1
 
 /* The size of `wchar_t', as computed by sizeof. */
+#ifdef _WIN32
 #define SIZEOF_WCHAR_T 2
+#else
+#define SIZEOF_WCHAR_T 4
+#endif
 
 /* The size of `_Bool', as computed by sizeof. */
 #define SIZEOF__BOOL 1
