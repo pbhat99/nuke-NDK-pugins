@@ -106,16 +106,16 @@ PLUGIN_REGISTRY = [
 
 def get_platform_tag(platform_name):
     if platform_name.lower().startswith("win"):
-        return "WIN", ".dll"
+        return "WIN", [".dll"]
     elif platform_name.lower().startswith("mac") or platform_name.lower() == "darwin":
-        return "MAC", ".dylib"
+        return "MAC", [".dylib", ".so"]
     else:
-        return "LINUX", ".so"
+        return "LINUX", [".so"]
 
 def build_single_plugin(plugin, platform_name, nuke_version, ndk_dir, root_dir):
     root = Path(root_dir).resolve()
     src_dir = root / plugin["source"]
-    platform_tag, ext = get_platform_tag(platform_name)
+    platform_tag, valid_exts = get_platform_tag(platform_name)
     
     v_clean = nuke_version.lower().replace("nuke", "")
     folder_tag = f"Nuke{v_clean}"
@@ -189,10 +189,13 @@ def build_single_plugin(plugin, platform_name, nuke_version, ndk_dir, root_dir):
     # 3. Deploy Artifacts
     print(f"[3/3] Deploying artifacts to {deploy_dir} ...")
     found_any = False
-    for f in tmp_build.rglob(f"*{ext}"):
-        shutil.copy2(f, deploy_dir)
-        print(f"  + Deployed: {f.name}")
-        found_any = True
+    for ext_candidate in valid_exts:
+        for f in tmp_build.rglob(f"*{ext_candidate}"):
+            if f.name.endswith(".lib") or f.name.endswith(".exp"):
+                continue
+            shutil.copy2(f, deploy_dir)
+            print(f"  + Deployed: {f.name}")
+            found_any = True
 
     # Also deploy companion .pyd files if present
     for f in tmp_build.rglob("*.pyd"):

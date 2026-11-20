@@ -25,7 +25,13 @@ include_directories(
 
 add_library(ColorGrade MODULE src/ColorGrade.cpp)
 target_link_libraries(ColorGrade PRIVATE ${NUKE_DDIMAGE_LIBRARY})
-set_target_properties(ColorGrade PROPERTIES PREFIX "")
+if(WIN32)
+    set_target_properties(ColorGrade PROPERTIES PREFIX "" SUFFIX ".dll")
+elseif(APPLE)
+    set_target_properties(ColorGrade PROPERTIES PREFIX "" SUFFIX ".dylib")
+else()
+    set_target_properties(ColorGrade PROPERTIES PREFIX "" SUFFIX ".so")
+endif()
 
 if (WIN32)
     target_compile_definitions(ColorGrade PRIVATE NOMINMAX _USE_MATH_DEFINES)

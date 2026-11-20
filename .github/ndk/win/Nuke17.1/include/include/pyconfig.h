@@ -65,11 +65,15 @@ WIN32 is still required for the locale module.
 #define HAVE_STRFTIME
 #define DONT_HAVE_SIG_ALARM
 #define DONT_HAVE_SIG_PAUSE
+#ifdef _WIN32
 #define LONG_BIT        32
 #define WORD_BIT 32
-
-#define MS_WIN32 /* only support win32 and greater. */
+#define MS_WIN32
 #define MS_WINDOWS
+#else
+#define LONG_BIT        64
+#define WORD_BIT 32
+#endif
 #define NT_THREADS
 #define WITH_THREAD
 #ifndef NETSCAPE_PI
@@ -353,7 +357,19 @@ Py_NO_ENABLE_SHARED to find out.  Also support MS_NO_COREDLL for b/w compat */
 #endif  /* _MSC_VER > 1300  */
 #endif  /* _MSC_VER */
 
-#endif
+#else /* NOT MS_WIN32: Linux/macOS 64-bit */
+
+#define SIZEOF_SHORT 2
+#define SIZEOF_INT 4
+#define SIZEOF_LONG 8
+#define ALIGNOF_LONG 8
+#define SIZEOF_LONG_LONG 8
+#define SIZEOF_DOUBLE 8
+#define SIZEOF_FLOAT 4
+#define HAVE_UINTPTR_T 1
+#define HAVE_INTPTR_T 1
+
+#endif /* MS_WIN32 */
 
 /* define signed and unsigned exact-width 32-bit and 64-bit types, used in the
    implementation of Python integers. */

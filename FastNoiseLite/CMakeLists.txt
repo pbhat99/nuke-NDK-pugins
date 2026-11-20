@@ -26,7 +26,13 @@ include_directories(
 
 add_library(FastNoiseLite MODULE src/FastNoiseLiteNode.cpp)
 target_link_libraries(FastNoiseLite PRIVATE ${NUKE_DDIMAGE_LIBRARY})
-set_target_properties(FastNoiseLite PROPERTIES PREFIX "")
+if(WIN32)
+    set_target_properties(FastNoiseLite PROPERTIES PREFIX "" SUFFIX ".dll")
+elseif(APPLE)
+    set_target_properties(FastNoiseLite PROPERTIES PREFIX "" SUFFIX ".dylib")
+else()
+    set_target_properties(FastNoiseLite PROPERTIES PREFIX "" SUFFIX ".so")
+endif()
 
 if (WIN32)
     target_compile_definitions(FastNoiseLite PRIVATE NOMINMAX _USE_MATH_DEFINES)

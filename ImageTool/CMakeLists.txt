@@ -55,7 +55,7 @@ elseif(APPLE)
     set(PLUGIN_EXT ".dylib")
 else() # Linux
     add_compile_options(-fPIC -Wall -O3)
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--unresolved-symbols=ignore-in-shared-libs")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--unresolved-symbols=ignore-all")
     set(PLUGIN_EXT ".so")
 endif()
 

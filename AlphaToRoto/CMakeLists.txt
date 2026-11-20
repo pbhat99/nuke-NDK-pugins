@@ -121,10 +121,13 @@ endif()
 # ============================================================================
 add_library(AlphaToRoto SHARED src/AlphaToRoto.cpp)
 
-set_target_properties(AlphaToRoto PROPERTIES
-    PREFIX ""
-    SUFFIX ".dll"
-)
+if(WIN32)
+    set_target_properties(AlphaToRoto PROPERTIES PREFIX "" SUFFIX ".dll")
+elseif(APPLE)
+    set_target_properties(AlphaToRoto PROPERTIES PREFIX "" SUFFIX ".dylib")
+else()
+    set_target_properties(AlphaToRoto PROPERTIES PREFIX "" SUFFIX ".so")
+endif()
 
 target_include_directories(AlphaToRoto PRIVATE
     "${_nuke_include}"

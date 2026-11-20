@@ -116,5 +116,7 @@ Thumbs.db
 # Preserved Repositories & CI Stubs
 # ==============================================================================
 !.github/ndk/**
+!rotoReducer/cpp/*.lib
+
 
 
