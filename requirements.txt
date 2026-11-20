@@ -1,0 +1,6 @@
+# ==============================================================================
+# Nuke Plugin Build & Tooling Dependencies
+# ==============================================================================
+# Core packaging & build helpers (no numpy / scipy / external runtime dependencies)
+wheel>=0.40.0
+setuptools>=65.0.0

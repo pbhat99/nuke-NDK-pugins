@@ -35,6 +35,8 @@ pip-delete-this-directory.txt
 # ==============================================================================
 # Build Directories & Compiler Outputs
 # ==============================================================================
+_build_tmp/
+**/_build_tmp/
 build/
 **/build/
 bin/
