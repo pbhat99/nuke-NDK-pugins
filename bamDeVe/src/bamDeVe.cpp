@@ -464,7 +464,13 @@ void eval_residuals(
 
 } // namespace
 
-extern "C" __declspec(dllexport) int bamdeve_fit(
+#if defined(_WIN32)
+#  define BAMDEVE_EXPORT __declspec(dllexport)
+#else
+#  define BAMDEVE_EXPORT __attribute__((visibility("default")))
+#endif
+
+extern "C" BAMDEVE_EXPORT int bamdeve_fit(
     int n_points,
     const double* xp, const double* yp,
     const double* xq, const double* yq,
@@ -581,7 +587,7 @@ extern "C" __declspec(dllexport) int bamdeve_fit(
     return 0;
 }
 
-extern "C" __declspec(dllexport) void bamdeve_downsample(
+extern "C" BAMDEVE_EXPORT void bamdeve_downsample(
     const float* src, int w, int h, int factor, float* dst
 ) {
     if (!src || !dst || factor <= 0) return;

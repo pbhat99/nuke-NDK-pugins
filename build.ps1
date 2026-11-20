@@ -875,6 +875,7 @@ function Build-SinglePlugin {
     }
 
     $nukePathNorm = $NukeTarget.Path -replace '\\', '/'
+    $cmakeModuleDir = (Join-Path $WorkspaceRoot "cmake") -replace '\\', '/'
 
     # Set scoped environment variables for Nuke discovery
     $env:NDKDIR            = $nukePathNorm
@@ -893,7 +894,8 @@ function Build-SinglePlugin {
         "-DNDKDIR=$nukePathNorm",
         "-DNuke_ROOT=$nukePathNorm",
         "-DNUKE_INSTALL_PATH=$nukePathNorm",
-        "-DNUKE_INSTALL_DIR=$nukePathNorm"
+        "-DNUKE_INSTALL_DIR=$nukePathNorm",
+        "-DCMAKE_MODULE_PATH=$cmakeModuleDir"
     )
 
     # Dynamic plugin-specific arguments relative to workspace

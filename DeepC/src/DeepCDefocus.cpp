@@ -1203,7 +1203,7 @@ public:
                                  "DeepCDefocus: band %d rows [%d,%d) computed by "
                                  "thread 0x%lx in %.3f ms fetch %.3f ms\n",
                                  work, y0, y1,
-                                 static_cast<unsigned long>(pthread_self()),
+                                 static_cast<unsigned long>(reinterpret_cast<uintptr_t>(pthread_self())),
                                  bandMs, fetchMs);
                 }
                 continue;   // copy on the next pass

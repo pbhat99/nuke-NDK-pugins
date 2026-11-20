@@ -108,7 +108,7 @@ jobs:
   build:
     needs: prepare-matrix
     name: Build (${{ matrix.platform }} - Nuke ${{ matrix.nuke_version }})
-    runs-on: ${{ matrix.platform == 'Windows' && 'windows-latest' || (matrix.platform == 'macOS' && 'macos-latest' || 'ubuntu-latest') }}
+    runs-on: ${{ matrix.platform == 'Windows' && 'windows-2022' || (matrix.platform == 'macOS' && 'macos-latest' || 'ubuntu-latest') }}
     strategy:
       fail-fast: false
       matrix:
@@ -128,6 +128,12 @@ jobs:
 
       - name: Setup CMake & Ninja
         uses: lukka/get-cmake@latest
+
+      - name: Install Linux Build Dependencies
+        if: matrix.platform == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libglu1-mesa-dev libgl1-mesa-dev
 
       - name: Setup Nuke NDK
         run: |

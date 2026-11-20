@@ -135,6 +135,7 @@ def build_single_plugin(plugin, platform_name, nuke_version, ndk_dir, root_dir):
     print(f"{'='*70}")
 
     ndk_norm = str(ndk_dir).replace("\\", "/")
+    cmake_module_dir = str(root / "cmake").replace("\\", "/")
     cmake_args = [
         "cmake",
         "-B", str(tmp_build),
@@ -143,18 +144,22 @@ def build_single_plugin(plugin, platform_name, nuke_version, ndk_dir, root_dir):
         f"-DNUKE_VERSION={v_clean}",
         f"-DNDKDIR={ndk_norm}",
         f"-DNuke_ROOT={ndk_norm}",
-        f"-DNUKE_INSTALL_PATH={ndk_norm}"
+        f"-DNUKE_INSTALL_PATH={ndk_norm}",
+        f"-DNUKE_INSTALL_DIR={ndk_norm}",
+        f"-DCMAKE_MODULE_PATH={cmake_module_dir}"
     ]
 
     # Platform-specific generator & flags
     if platform_tag == "WIN":
-        cmake_args.extend(["-G", "Visual Studio 17 2022", "-A", "x64"])
+        if "CMAKE_GENERATOR" not in os.environ:
+            cmake_args.extend(["-G", "Visual Studio 17 2022", "-A", "x64"])
     elif platform_tag == "MAC":
         cmake_args.extend([
             "-G", "Unix Makefiles",
             "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64",
             "-DCMAKE_SHARED_LINKER_FLAGS=-undefined dynamic_lookup",
-            "-DCMAKE_MODULE_LINKER_FLAGS=-undefined dynamic_lookup"
+            "-DCMAKE_MODULE_LINKER_FLAGS=-undefined dynamic_lookup",
+            "-DCMAKE_CXX_FLAGS=-fdeclspec"
         ])
     else: # LINUX
         cmake_args.extend([
@@ -185,6 +190,12 @@ def build_single_plugin(plugin, platform_name, nuke_version, ndk_dir, root_dir):
     print(f"[3/3] Deploying artifacts to {deploy_dir} ...")
     found_any = False
     for f in tmp_build.rglob(f"*{ext}"):
+        shutil.copy2(f, deploy_dir)
+        print(f"  + Deployed: {f.name}")
+        found_any = True
+
+    # Also deploy companion .pyd files if present
+    for f in tmp_build.rglob("*.pyd"):
         shutil.copy2(f, deploy_dir)
         print(f"  + Deployed: {f.name}")
         found_any = True

@@ -68,7 +68,7 @@ def setup_ndk(platform_name, version, cache_dir=None):
         target_ndk.mkdir(parents=True, exist_ok=True)
         if common_include.exists() and not (target_ndk / "include").exists():
             shutil.copytree(common_include, target_ndk / "include", dirs_exist_ok=True)
-        # Create stub libDDImage.dylib so CMake find_library and existence checks succeed
+        # Create stub libDDImage.dylib and libDDImage.so so all CMake checks succeed
         stub_dylib = target_ndk / "libDDImage.dylib"
         if not stub_dylib.exists():
             try:
@@ -76,6 +76,13 @@ def setup_ndk(platform_name, version, cache_dir=None):
                 print(f"[NDK] Created stub {stub_dylib.name}")
             except Exception as e:
                 print(f"[WARN] Could not create stub dylib: {e}")
+        stub_so = target_ndk / "libDDImage.so"
+        if not stub_so.exists():
+            try:
+                subprocess.run(["clang", "-shared", "-o", str(stub_so), "-x", "c", "/dev/null"], check=True)
+                print(f"[NDK] Created stub {stub_so.name}")
+            except Exception as e:
+                print(f"[WARN] Could not create stub so: {e}")
 
     else: # Linux
         target_ndk = ndk_root / "linux" / folder_tag

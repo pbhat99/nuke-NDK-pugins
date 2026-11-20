@@ -13,7 +13,11 @@
 // limitations under the License.
 
 #ifndef FN_SHARED_EXPORT
-#define FN_SHARED_EXPORT __declspec(dllexport)
+#  if defined(_WIN32)
+#    define FN_SHARED_EXPORT __declspec(dllexport)
+#  else
+#    define FN_SHARED_EXPORT __attribute__((visibility("default")))
+#  endif
 #endif
 
 #include <DDImage/GeomOp.h>

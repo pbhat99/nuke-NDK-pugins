@@ -29,7 +29,13 @@ if(NOT EXISTS "${NUKE_INCLUDE_DIR}/DDImage/Op.h")
 endif()
 
 # Collect Nuke library stubs
-file(GLOB NUKE_LIBRARIES "${NUKE_INSTALL_DIR}/*.lib")
+if(WIN32)
+    file(GLOB NUKE_LIBRARIES "${NUKE_INSTALL_DIR}/*.lib")
+elseif(APPLE)
+    file(GLOB NUKE_LIBRARIES "${NUKE_INSTALL_DIR}/*.dylib" "${NUKE_INSTALL_DIR}/*.so")
+else()
+    file(GLOB NUKE_LIBRARIES "${NUKE_INSTALL_DIR}/*.so")
+endif()
 
 # ==============================================================================
 # Build the shared plugin (.dll)
