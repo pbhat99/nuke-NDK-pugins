@@ -81,5 +81,5 @@ void MirrorExtend::engine(int y, int x, int r, ChannelMask channels, Row& row) {
     }
 }
 
-static Iop* build_node(Node* node) { return new MirrorExtend(node); }
+static Op* build_node(Node* node) { return new MirrorExtend(node); }
 const Iop::Description MirrorExtend::description(CLASS, build_node);

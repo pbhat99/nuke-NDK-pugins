@@ -19,6 +19,7 @@
 #include <DDImage/GeomOp.h>
 #include <DDImage/Knobs.h>
 #include <DDImage/Op.h>
+#include <DDImage/ddImageVersionNumbers.h>
 
 #include <usg/engine/GeomEngine.h>
 #include <usg/engine/GeomSceneContext.h>
@@ -40,7 +41,11 @@ using namespace DD::Image;
 class USDSubDEngine : public GeomOpEngine
 {
 public:
+#if kDDImageVersionMajorNum <= 16
+    USDSubDEngine(Op* parent) : GeomOpEngine(parent) {}
+#else
     USDSubDEngine(GeomOpNode* parent) : GeomOpEngine(parent) {}
+#endif
     std::string name() const override { return "USDSubDEngine"; }
 
 protected:
@@ -78,7 +83,11 @@ protected:
         for (size_t i = 0; i < meshes.size(); ++i)
         {
             // Thread-safe abort check
+#if kDDImageVersionMajorNum <= 16
+            if (op && op->aborted()) break;
+#else
             if (aborted()) break;
+#endif
 
             usg::MeshPrim mesh = meshes[i];
             usg::Prim prim(mesh);

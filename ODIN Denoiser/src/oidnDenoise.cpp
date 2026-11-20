@@ -85,10 +85,12 @@ void NukeOIDNDenoise::setupFilter()
         {
             quality = oidn::Quality::Balanced;
         }
+#if defined(OIDN_VERSION_MAJOR) && (OIDN_VERSION_MAJOR > 2 || (OIDN_VERSION_MAJOR == 2 && OIDN_VERSION_MINOR >= 3))
         else if (m_quality == 3)
         {
             quality = oidn::Quality::Fast;
         }
+#endif
         
         m_filter.set("quality", quality);
         m_filter.set("cleanAux", m_cleanAux);

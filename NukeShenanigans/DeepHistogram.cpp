@@ -149,5 +149,5 @@ void DeepHistogram::renderStripe(ImagePlane& image_plane) {
     }
 }
 
-static Iop* build(Node* node) { return new DeepHistogram(node); }
+static Op* build(Node* node) { return new DeepHistogram(node); }
 const Iop::Description DeepHistogram::node_description(CLASS, build);

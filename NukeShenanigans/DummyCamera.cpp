@@ -3,7 +3,11 @@
 //
 
 #include <DDImage/CameraOp.h>
+#if defined(__has_include)
+#if __has_include(<DDImage/CameraSceneOp.h>)
 #include <DDImage/CameraSceneOp.h>
+#endif
+#endif
 #include <DDImage/Knob.h>
 
 const char* CLASS = "DummyCamera";

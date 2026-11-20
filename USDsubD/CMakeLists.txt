@@ -53,7 +53,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 if(WIN32)
     target_compile_definitions(${PROJECT_NAME} PRIVATE
         FN_SHARED_EXPORT=__declspec\(dllexport\)
-        _WIN32_WINNT=0x0601
     )
 endif()
 
