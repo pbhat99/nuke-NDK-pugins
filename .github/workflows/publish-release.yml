@@ -1,0 +1,135 @@
+name: Publish Release & Commit (After Testing)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release Version Tag (e.g. v1.0.0 or auto to auto-increment)'
+        required: true
+        default: 'auto'
+        type: string
+
+      release_title:
+        description: 'Release Title'
+        required: false
+        default: 'Nuke Plugins Multi-Platform Release'
+        type: string
+
+      build_run_id:
+        description: 'Manual Build Run ID to pull compiled binaries from (or "latest" or "local")'
+        required: false
+        default: 'latest'
+        type: string
+
+      commit_binaries:
+        description: 'Commit any newly compiled binaries in COMPILED/ to git main branch?'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Package 3 Platform ZIPs & Publish Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch Compiled Artifacts from Build Run
+        run: |
+          TARGET_RUN="${{ github.event.inputs.build_run_id }}"
+          mkdir -p COMPILED
+          mkdir -p downloaded-artifacts
+
+          if [ "$TARGET_RUN" = "local" ]; then
+            echo "Using existing binaries already committed in the repository."
+          else
+            if [ "$TARGET_RUN" = "latest" ] || [ -z "$TARGET_RUN" ]; then
+              echo "Finding latest successful manual build run..."
+              TARGET_RUN=$(gh run list --workflow=manual-build.yml --status=success --limit=1 --json databaseId --jq '.[0].databaseId')
+              echo "Found latest run ID: $TARGET_RUN"
+            fi
+
+            if [ -n "$TARGET_RUN" ] && [ "$TARGET_RUN" != "null" ]; then
+              echo "Downloading build artifacts from run $TARGET_RUN via GitHub CLI..."
+              gh run download "$TARGET_RUN" --dir downloaded-artifacts/ || true
+
+              echo "Consolidating downloaded artifacts into COMPILED/ ..."
+              for d in downloaded-artifacts/*; do
+                if [ -d "$d" ]; then
+                  echo "Merging $d into COMPILED/ ..."
+                  cp -rn "$d"/* COMPILED/ 2>/dev/null || true
+                fi
+              done
+            else
+              echo "[WARN] No prior successful manual build run found. Packaging whatever is present in repository COMPILED/."
+            fi
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve Version Tag
+        run: |
+          RAW="${{ github.event.inputs.release_version }}"
+          if [ -z "$RAW" ] || [ "$RAW" = "auto" ]; then
+            LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null || echo "")
+            if [ -z "$LATEST_TAG" ]; then
+              VERSION="v1.0.0"
+            else
+              NUMS="${LATEST_TAG#v}"
+              MAJOR=$(echo "$NUMS" | cut -d. -f1)
+              MINOR=$(echo "$NUMS" | cut -d. -f2)
+              PATCH=$(echo "$NUMS" | cut -d. -f3)
+              PATCH=$((PATCH + 1))
+              VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+            fi
+          else
+            VERSION="$RAW"
+          fi
+          echo "Resolved Release Version: $VERSION"
+          echo "FINAL_VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Package 3 Separate Platform ZIP Files
+        run: |
+          VERSION="${{ env.FINAL_VERSION }}"
+          echo "Packaging separate per-platform ZIP archives for $VERSION ..."
+
+          # 1. Windows: pbhat99-build-<version>-windows.zip (includes all compiled Nuke versions inside WIN/)
+          if [ -d "COMPILED/WIN" ]; then
+            zip -r "pbhat99-build-${VERSION}-windows.zip" COMPILED/WIN/ COMPILED/init.py README.md
+          fi
+
+          # 2. Linux: pbhat99-build-<version>-linux.zip (includes all compiled Nuke versions inside LINUX/)
+          if [ -d "COMPILED/LINUX" ]; then
+            zip -r "pbhat99-build-${VERSION}-linux.zip" COMPILED/LINUX/ COMPILED/init.py README.md
+          fi
+
+          # 3. macOS: pbhat99-build-<version>-macos.zip (includes all compiled Nuke versions inside MAC/)
+          if [ -d "COMPILED/MAC" ]; then
+            zip -r "pbhat99-build-${VERSION}-macos.zip" COMPILED/MAC/ COMPILED/init.py README.md
+          fi
+
+      - name: Commit & Push Compiled Binaries to Repository
+        if: github.event.inputs.commit_binaries == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "release: update compiled binaries for release ${{ env.FINAL_VERSION }}"
+          file_pattern: 'COMPILED/**'
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.FINAL_VERSION }}
+          name: "${{ github.event.inputs.release_title }} (${{ env.FINAL_VERSION }})"
+          files: |
+            pbhat99-build-*.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

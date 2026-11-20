@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(NOT DEFINED NUKE_VERSION)
-    set(NUKE_VERSION "17.1v2")
+    set(NUKE_VERSION "17.1")
 endif()
 
 if(NOT DEFINED NDKDIR)
@@ -29,7 +29,7 @@ if(NOT DEFINED NDKDIR)
 endif()
 
 message(STATUS "Configuring ImageTool for Nuke ${NUKE_VERSION}")
-message(STATUS "Nuke directory: ${NDKDIR}")
+message(STATUS "NDK directory: ${NDKDIR}")
 
 add_definitions(-DNDEBUG -DNOMINMAX)
 
@@ -48,23 +48,14 @@ if(WIN32)
             /wd4514 /wd4710 /wd4711 /wd4668
         )
     endif()
-    set(NUKE_LIB "${NDKDIR}/DDImage.lib")
-    set(PLATFORM_LIBS opengl32)
     set(PLUGIN_EXT ".dll")
 elseif(APPLE)
     add_compile_options(-fPIC -Wall -O3)
-    set(CMAKE_SKIP_BUILD_RPATH TRUE)
-    set(CMAKE_SKIP_INSTALL_RPATH TRUE)
-    set(NUKE_LIB "${NDKDIR}/libDDImage.dylib")
-    find_library(OPENGL_LIB OpenGL)
-    set(PLATFORM_LIBS ${OPENGL_LIB})
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
     set(PLUGIN_EXT ".dylib")
 else() # Linux
     add_compile_options(-fPIC -Wall -O3)
-    set(CMAKE_SKIP_BUILD_RPATH TRUE)
-    set(CMAKE_SKIP_INSTALL_RPATH TRUE)
-    set(NUKE_LIB "${NDKDIR}/libDDImage.so")
-    set(PLATFORM_LIBS GL)
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--unresolved-symbols=ignore-in-shared-libs")
     set(PLUGIN_EXT ".so")
 endif()
 
@@ -78,14 +69,23 @@ target_include_directories(ImageTool PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
     "${NDKDIR}/include"
 )
+
 target_compile_definitions(ImageTool PRIVATE
     _USE_MATH_DEFINES
     NOMINMAX
 )
-target_link_libraries(ImageTool PRIVATE
-    "${NUKE_LIB}"
-    ${PLATFORM_LIBS}
-)
+
+if(WIN32)
+    target_link_libraries(ImageTool PRIVATE "${NDKDIR}/DDImage.lib" opengl32)
+elseif(APPLE)
+    find_library(OPENGL_LIB OpenGL)
+    if(OPENGL_LIB)
+        target_link_libraries(ImageTool PRIVATE ${OPENGL_LIB})
+    endif()
+else() # Linux
+    target_link_libraries(ImageTool PRIVATE GL)
+endif()
+
 set_target_properties(ImageTool PROPERTIES
     OUTPUT_NAME "ImageTool"
     SUFFIX "${PLUGIN_EXT}"

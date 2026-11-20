@@ -147,9 +147,18 @@ def build_single_plugin(plugin, platform_name, nuke_version, ndk_dir, root_dir):
     if platform_tag == "WIN":
         cmake_args.extend(["-G", "Visual Studio 17 2022", "-A", "x64"])
     elif platform_tag == "MAC":
-        cmake_args.extend(["-G", "Unix Makefiles", '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64'])
+        cmake_args.extend([
+            "-G", "Unix Makefiles",
+            "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64",
+            "-DCMAKE_SHARED_LINKER_FLAGS=-undefined dynamic_lookup",
+            "-DCMAKE_MODULE_LINKER_FLAGS=-undefined dynamic_lookup"
+        ])
     else: # LINUX
-        cmake_args.extend(["-G", "Unix Makefiles"])
+        cmake_args.extend([
+            "-G", "Unix Makefiles",
+            "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--unresolved-symbols=ignore-in-shared-libs",
+            "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,--unresolved-symbols=ignore-in-shared-libs"
+        ])
 
     if plugin["id"] == "DeepC":
         cmake_args.append("-DDEEPC_BUILD_TESTS=OFF")

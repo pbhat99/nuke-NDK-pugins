@@ -36,9 +36,17 @@ file(GLOB NUKE_LIBRARIES "${NUKE_INSTALL_DIR}/*.lib")
 # ==============================================================================
 add_library(${PROJECT_NAME} SHARED USDSubD.cpp)
 
+if(WIN32)
+    set(PLUGIN_EXT ".dll")
+elseif(APPLE)
+    set(PLUGIN_EXT ".dylib")
+else()
+    set(PLUGIN_EXT ".so")
+endif()
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
     PREFIX ""
-    SUFFIX ".dll"
+    SUFFIX "${PLUGIN_EXT}"
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE

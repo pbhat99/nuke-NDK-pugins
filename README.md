@@ -71,3 +71,30 @@ nuke.pluginAddPath("<WORKSPACE>/COMPILED/WIN/Nuke17.1")
 ```
 
 The loaders automatically register each tool folder, configure Windows DLL search paths, and register node menu entries.
+
+---
+
+## Multi-Platform CI / Automated Releases (GitHub Actions)
+
+This repository includes automated multi-platform GitHub Actions workflows to compile and package binaries across **Windows**, **Linux**, and **macOS**:
+
+### 1. Build & Test Workflow (`manual-build.yml`)
+- Triggered manually via **Actions -> Manual Multi-Platform Plugin Builder**.
+- **Inputs**:
+  - `nuke_version`: Target Nuke version string (e.g. `17.1`, `16.0`, `15.1`, or `ALL`).
+  - `plugin_target`: Specific plugin (e.g. `ImageTool`, `bamDeVe`, `cropMore`) or `ALL`.
+  - `commit_and_release`: Default `false`. Leaves artifacts untracked until you test them!
+  - `release_version`: Version tag (`auto` detects and increments latest git tag, or enter custom like `v1.0.0`).
+- **Output Artifacts**:
+  - `pbhat99-build-zips` containing 3 separate platform archives:
+    - `pbhat99-build-<version>-windows.zip`
+    - `pbhat99-build-<version>-linux.zip`
+    - `pbhat99-build-<version>-macos.zip`
+  - Each platform zip contains all Nuke versions built up to now inside `COMPILED/<PLATFORM>/`, along with `COMPILED/init.py` and documentation.
+  - Download and extract the zips to test the plugins in your local Nuke environment before committing or releasing.
+
+### 2. Publish Release & Commit Workflow (`publish-release.yml`)
+- Once you've downloaded and verified the build artifacts in Nuke:
+- Go to **Actions -> Publish Release & Commit (After Testing)** -> click **Run workflow**.
+- It automatically pulls the tested binaries from the latest build run, commits `COMPILED/` to the `main` branch, creates the Git tag, and publishes the official GitHub Release with all 3 platform ZIP archives attached.
+
